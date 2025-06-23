@@ -515,7 +515,8 @@ Operation:
 		//Discord
 		public void SendDiscordMessage (string content) {
 			string payload = "{\"content\": \"" + content + "\"}";
-			InvokeWebRequest(webHook, WebRequestMethods.Http.Post, payload,false,true);
+			//InvokeWebRequest(webHook, WebRequestMethods.Http.Post, payload,false,true);
+			InvokeWebRequest(moneyMadeBox.Text, WebRequestMethods.Http.Post, payload,false,true);
 		}
 
 		//Automation
@@ -836,7 +837,7 @@ Operation:
 				HttpWebRequest request = (HttpWebRequest)WebRequest.Create(Url);
 				
 				if (JSON == true) {
-					request.Headers.Add("Content-Type", "application/json");
+					request.ContentType = "application/json";
 				}
 				if (Authorization == true) {
 					//request.Headers.Add("Authorization", "Bearer "+webHook);
@@ -913,10 +914,12 @@ Operation:
 		//ui
         public void runButton_Click(object sender, EventArgs e) {
 			outBox.Text = "Run" + Environment.NewLine + outBox.Text;
+			SendDiscordMessage("Run");
         }// end runButton_Click
 
         public void stopButton_Click(object sender, EventArgs e) {
 			outBox.Text = "Stop" + Environment.NewLine + outBox.Text;
+			SendDiscordMessage("Stop");
         }// end stopButton_Click
 
 		public void OnResize(object sender, System.EventArgs e) {
