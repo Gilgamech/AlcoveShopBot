@@ -16,14 +16,17 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Net;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Forms;
+using System.Web.Script.Serialization;
 
 namespace ShopBotNamespace {
     public class AlcoveShopBot : Form {
@@ -32,6 +35,8 @@ namespace ShopBotNamespace {
 		public string appName = "AlcoveShopBot";
 		public static string StoreName = "Alcove";
 		public string appTitle = StoreName + " Shop Bot - Build ";
+
+		JavaScriptSerializer serializer = new JavaScriptSerializer();
 
         public Button runButton, stopButton;
 		//public TextBox webHookBox = new TextBox();
@@ -87,14 +92,14 @@ namespace ShopBotNamespace {
 		public int WindowHeight = row8+10;
 		
 		public bool debuggingView = false;
-		public string FullText = "is now full";//[05:33:18] [Render thread/INFO]: [System] [CHAT] SHOPS ? Your shop at 15274, 66, 20463 is now full.
-		public string SellText = "to your shop";//[05:40:12] [Render thread/INFO]: [System] [CHAT] SHOPS ? kota490 sold 1728 Sea Lantern to your shop {3}.
-		public string BuyText = "from your shop";//[05:47:12] [Render thread/INFO]: [System] [CHAT] SHOPS ? _Blackjack29313 purchased 2 Grindstone from your shop and you earned $9.50 ($0.50 in taxes).
+		public string FullText = "is now full";//[05:33:18] [Render thread/INFO]: [System] [CHAT] SHOPS ▶ Your shop at 15274, 66, 20463 is now full.
+		public string SellText = "to your shop";//[05:40:12] [Render thread/INFO]: [System] [CHAT] SHOPS ▶ kota490 sold 1728 Sea Lantern to your shop {3}.
+		public string BuyText = "from your shop";//[05:47:12] [Render thread/INFO]: [System] [CHAT] SHOPS ▶ _Blackjack29313 purchased 2 Grindstone from your shop and you earned $9.50 ($0.50 in taxes).
 		public string EmptyText = "has run out of";//[06:07:40] [Rend
 		//public void OldDate = get-date -f dd
 
-		public string DataFile = "C:\\Users\\StephenGillie\\Documents\\PowerShell\\AlcoveShopBot.csv";
-		public string OwnerList = "C:\\Users\\StephenGillie\\Documents\\PowerShell\\ChillPWOwnerList.csv";
+		public string DataFile = "C:\\repos\\AlcoveShopBot\\AlcoveShopBot.csv";
+		//public string OwnerList = "C:\\repos\\AlcoveShopBot\\ChillPWOwnerList.csv";
 
 /*
  		public void Values = @{}
@@ -349,7 +354,43 @@ namespace ShopBotNamespace {
 			Controls.Add(statusStrip);
 		}
 		
+		public static DialogResult ShowInputDialog(ref string input) {
+			System.Drawing.Size size = new System.Drawing.Size(200, 70);
+			Form inputBox = new Form();
 
+			inputBox.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
+			inputBox.ClientSize = size;
+			inputBox.Text = "Name";
+
+			System.Windows.Forms.TextBox textBox = new TextBox();
+			textBox.Size = new System.Drawing.Size(size.Width - 10, 23);
+			textBox.Location = new System.Drawing.Point(5, 5);
+			textBox.Text = input;
+			inputBox.Controls.Add(textBox);
+
+			Button okButton = new Button();
+			okButton.DialogResult = System.Windows.Forms.DialogResult.OK;
+			okButton.Name = "okButton";
+			okButton.Size = new System.Drawing.Size(75, 23);
+			okButton.Text = "&OK";
+			okButton.Location = new System.Drawing.Point(size.Width - 80 - 80, 39);
+			inputBox.Controls.Add(okButton);
+
+			Button cancelButton = new Button();
+			cancelButton.DialogResult = System.Windows.Forms.DialogResult.Cancel;
+			cancelButton.Name = "cancelButton";
+			cancelButton.Size = new System.Drawing.Size(75, 23);
+			cancelButton.Text = "&Cancel";
+			cancelButton.Location = new System.Drawing.Point(size.Width - 80, 39);
+			inputBox.Controls.Add(cancelButton);
+
+			inputBox.AcceptButton = okButton;
+			inputBox.CancelButton = cancelButton; 
+
+			DialogResult result = inputBox.ShowDialog();
+			input = textBox.Text;
+			return result;
+		}
 
 
 
@@ -372,6 +413,122 @@ Operation:
 */
 
 		//Data
+		public List<StockItem> GetShopData (int setzero) {
+			List<StockItem> out_var = new List<StockItem>();
+			List<string> Data = new List<string>();
+			string[] fileContents = GetContent(LatestLog).Replace("] [Render thread/INFO]: [System] [CHAT] ","RemoveTimeSpecialTokenYouShouldNeverSeeThis]\n").Split('\n');
+			Data.AddRange(fileContents.Where(d => d.Contains("SHOPS ▶ ")).ToList());
+
+		//List<string> DataArray = new []{ Data };// select-string "SHOPS ▶ " | Where {_ -notmatch "Enter all in chat"}).Replace("\[Render thread/INFO\]: \[System\] \[CHAT\] SHOPS ▶ ","")
+			string EmptyText = "*has run out of*";//[06:07:40] Your shop at 15226, 63, 20487 has run out of Cocoa Beans!
+			//[07:12:51] [Render thread/INFO]: [System] [CHAT] SHOPS ▶ This shop has run out of space! Contact the shop owner or staff to get it emptied.
+			string FullText = "*is now full*";//[05:33:18] Your shop at 15274, 66, 20463 is now full.
+			string SellText = "*to your shop*";//[05:40:12] kota490 sold 1728 Sea Lantern to your shop {3}.
+			string BuyText = "*from your shop*";//[05:47:12] _Blackjack29313 purchased 2 Grindstone from your shop and you earned 9.50 (0.50 in taxes).
+			dynamic[] NameData = FromCsv(GetContent(DataFile));
+			int n = 0;
+			Data = Data.Where(d => !d.Contains("Enter all in chat")).ToList();
+			Data = Data.Where(d => !d.Contains("out of space")).ToList();
+			Data = Data.Where(d => !d.Contains("RemoveTimeSpecialTokenYouShouldNeverSeeThis")).ToList();
+			Data = Data.Where(d => !d.Contains("how many you wish")).ToList();
+			//Data = Data | where {_ -notmatch ""}
+			foreach (string Item in Data) {
+				n++;
+				StockItem stockitem = new StockItem();
+				//Use all 3 coords because some places have 2 buy shops stacked at the same X and Z. 
+				switch (Item) {
+        case "*has run out of*":
+						string[] SplitItem = Item.Replace("[","").Replace("] Your shop at",",").Replace(" has run out of",",").Replace("!","").Replace(", ",",").Split(',');
+						//06:07:40 ,15226, 63, 20487, Cocoa Beans
+						stockitem.DateTime = SplitItem[0];
+						stockitem.XLoc = Convert.ToInt32(SplitItem[1]);
+						stockitem.YLoc = Convert.ToInt32(SplitItem[2]);
+						stockitem.ZLoc = Convert.ToInt32(SplitItem[3]);
+						stockitem.ItemName = SplitItem[4];
+						stockitem.Event = "Empty";
+						stockitem.StockQty = Convert.ToInt32((Data[Data.IndexOf(Item)-1].Split(' '))[3]);
+						stockitem.PlayerName = (Data[Data.IndexOf(Item)-1].Split(' '))[1];
+		            break;
+        case "*is now full*":
+						SplitItem = Item.Replace("[","").Replace("] Your shop at",",").Replace(" is now full.",", ").Replace("!","").Replace(", ",",").Split(',');
+						//05:33:18, 15274, 66, 20463,
+						stockitem.DateTime = SplitItem[0];
+						stockitem.XLoc = Convert.ToInt32(SplitItem[1]);
+						stockitem.YLoc = Convert.ToInt32(SplitItem[2]);
+						stockitem.ZLoc = Convert.ToInt32(SplitItem[3]);
+						//stockitem.ItemName = SplitItem[4];
+						stockitem.Event = "Full";
+						stockitem.StockQty = Convert.ToInt32((Data[Data.IndexOf(Item)-1].Split(' '))[3]);
+						stockitem.PlayerName = (Data[Data.IndexOf(Item)-1].Split(' '))[1];
+            break;
+        case "*to your shop*":
+						SplitItem = Item.Replace("[","").Replace("]",",").Replace(" sold ",", ").Replace(" to your shop {3}.",", ").Replace("!","").Split(',');
+						 //05:40:12, kota490, 1728 Sea Lantern,
+						stockitem.DateTime = SplitItem[0];
+						stockitem.PlayerName = SplitItem[1];
+						//stockitem.XLoc = SplitItem[1];
+						//stockitem.YLoc = SplitItem[2];
+						//stockitem.ZLoc = SplitItem[3];
+						string[] SplitItemArray = SplitItem[2].Split(' ').Skip(1).Take(9).ToArray();
+						stockitem.ItemName = String.Join(" ",SplitItemArray);
+						stockitem.Event = "Sell";
+						stockitem.StockQty = Convert.ToInt32((Data[Data.IndexOf(Item)-1].Split(' '))[3]);
+						stockitem.PlayerName = (Data[Data.IndexOf(Item)-1].Split(' '))[1];
+            break;
+        case "*from your shop*":
+						SplitItem = Item.Replace("[","").Replace("]",",").Replace(" purchased ",", ").Replace(" from your shop and you earned ",", ").Replace("(","").Split(',');
+						//05:47:12 _Blackjack29313, 2 Grindstone, 9.50 0.50 in taxes).
+						stockitem.DateTime = SplitItem[0];
+						stockitem.PlayerName = SplitItem[1];
+						//stockitem.XLoc = SplitItem[1];
+						//stockitem.YLoc = SplitItem[2];
+						//stockitem.ZLoc = SplitItem[3];
+						SplitItemArray = SplitItem[2].Split(' ').Skip(1).Take(9).ToArray();
+						stockitem.ItemName = String.Join(" ",SplitItemArray);
+						stockitem.Event = "Buy";
+						stockitem.StockQty = Convert.ToInt32((Data[Data.IndexOf(Item)-1].Split(' '))[3]);
+						stockitem.PlayerName = (Data[Data.IndexOf(Item)-1].Split(' '))[1];
+				
+            break;
+        default:
+            break;
+		}//end switch
+				var NewName = NameData.Where(x => x["XLoc"] = stockitem.XLoc).Where(x => x["YLoc"] = stockitem.YLoc).Where(x => x["ZLoc"] = stockitem.ZLoc);
+				if (NewName != null) {
+					//stockitem.ItemName = NewName.ToString();//["ItemName"]
+					outBox.Text = stockitem.ItemName + Environment.NewLine + outBox.Text;
+				}
+				out_var.Add(stockitem);
+			}//end foreach
+		return out_var;
+		}
+
+		//Discord
+		public void SendDiscordMessage (string content) {
+			string payload = "{\"content\": \"" + content + "\"}";
+			InvokeWebRequest(moneyMadeBox.Text, WebRequestMethods.Http.Post, payload,false,true);
+		}
+
+		//Automation
+		public void RunBot (int setzero) {
+			List<StockItem>  OldData = new List<StockItem>();
+			while (true) {
+				List<StockItem> ShopData = GetShopData(0).Where(x => x.Event.Contains("Empty")).ToList();
+		/*
+				string[] content = new string[]();//try{(diff OldData ShopData).inputobject}catch{}
+				foreach (string item in content){
+					string out_msg = "Empty shop: Player `" + item.PlayerName + "` has purchased the last "+ item.StockQty + " " + item.ItemName +"!";
+					outBox.Text = out_msg + Environment.NewLine + outBox.Text;
+					SendDiscordMessage(out_msg);
+				};
+		*/
+				OldData = ShopData;
+
+				//sleep 10
+			}
+		}
+
+		//Reports
 		public void DailyData (int setzero) {
 		/*
 			Param(
@@ -388,9 +545,6 @@ Operation:
 			
 			Data = null
 			inputfiles | %{
-				if (!Silent) {
-					Write-Host "Reading _"
-				}
 				Data += (GetShopData -LatestLog _)
 			}
 			return Data
@@ -398,150 +552,6 @@ Operation:
 		*/
 		}
 
-		public void GetShopData (int setzero) {
-		/*
-			Data = (((gc LatestLog) -split "`n" | select-string "SHOPS ? " | Where {_ -notmatch "Enter all in chat"}) -replace "\[Render thread/INFO\]: \[System\] \[CHAT\] SHOPS ? ","")
-			EmptyText = "*has run out of*"#[06:07:40] Your shop at 15226, 63, 20487 has run out of Cocoa Beans!
-			#[07:12:51] [Render thread/INFO]: [System] [CHAT] SHOPS ? This shop has run out of space! Contact the shop owner or staff to get it emptied.
-			FullText = "*is now full*"#[05:33:18] Your shop at 15274, 66, 20463 is now full.
-			SellText = "*to your shop*" #[05:40:12] kota490 sold 1728 Sea Lantern to your shop {3}.
-			BuyText = "*from your shop*" #[05:47:12] _Blackjack29313 purchased 2 Grindstone from your shop and you earned 9.50 (0.50 in taxes).
-			NameData = gc dataFile | convertfrom-csv
-			out = @()
-			n = 0
-			Data = Data | where {_ -notmatch "out of space"}
-			Data = Data | where {_ -notmatch "how many you wish"}
-			foreach (Item in Data) {
-				n++
-				new = "" | select ItemName,XLoc,YLoc,ZLoc,StockQty,Event,DateTime,PlayerName
-				#Use all 3 coords because some places have 2 buy shops stacked at the same X and Z. 
-				switch -wildcard (Item) {
-					EmptyText {
-						SplitItem = Item -replace "\[","" -replace "\] Your shop at","," -replace " has run out of","," -replace "!","" -split ", "
-						#06:07:40 ,15226, 63, 20487, Cocoa Beans
-						new.DateTime = SplitItem[0]
-						new.XLoc = SplitItem[1]
-						new.YLoc = SplitItem[2]
-						new.ZLoc = SplitItem[3]
-						new.ItemName = SplitItem[4]
-						new.Event = "Empty"
-						new.StockQty = (data[data.IndexOf(item)-1] -split " ")[3]
-						new.PlayerName = (data[data.IndexOf(item)-1] -split " ")[1]
-					}
-					FullText {
-						SplitItem = Item -replace "\[","" -replace "\] Your shop at","," -replace " is now full.",", " -replace "!","" -split ", "
-						#05:33:18, 15274, 66, 20463,
-						new.DateTime = SplitItem[0]
-						new.XLoc = SplitItem[1]
-						new.YLoc = SplitItem[2]
-						new.ZLoc = SplitItem[3]
-						#new.ItemName = SplitItem[4]
-						new.Event = "Full"
-						new.StockQty = (data[data.IndexOf(item)-1] -split " ")[3]
-						new.PlayerName = (data[data.IndexOf(item)-1] -split " ")[1]
-					}
-					SellText {
-					try {
-						SplitItem = Item -replace "\[","" -replace "\]","," -replace " sold ",", " -replace " to your shop \{3\}.",", " -replace "!","" -split ", "
-						 #05:40:12, kota490, 1728 Sea Lantern,
-						new.DateTime = SplitItem[0]
-						new.PlayerName = SplitItem[1]
-						#new.XLoc = SplitItem[1]
-						#new.YLoc = SplitItem[2]
-						#new.ZLoc = SplitItem[3]
-						new.ItemName = (SplitItem[2] -split " ")[1..9] -join " "
-						new.StockQty = [int](SplitItem[2] -split " ")[0]
-						new.Event = "Sell"
-						new.PlayerName = SplitItem[1]
-						} catch {}
-					}
-					BuyText {
-						SplitItem = Item -replace "\[","" -replace "\]","," -replace " purchased ",", " -replace " from your shop and you earned ",", " -replace "\(","" -split ", "
-						#05:47:12 _Blackjack29313, 2 Grindstone, 9.50 0.50 in taxes).
-						new.DateTime = SplitItem[0]
-						new.PlayerName = SplitItem[1]
-						#new.XLoc = SplitItem[1]
-						#new.YLoc = SplitItem[2]
-						#new.ZLoc = SplitItem[3]
-						new.ItemName = (SplitItem[2] -split " ")[1..9] -join " "
-						new.StockQty = [int](-(SplitItem[2] -split " ")[0])
-						new.Event = "Buy"
-						new.PlayerName = SplitItem[1]
-					}
-				}#end switch
-				pct = [Math]::round((n/data.length)*100)
-				Write-Progress -Activity "Reading latest.log" -Status "Item n of (data.length) ((pct)% complete)- item" -PercentComplete pct
-				
-				NewName = NameData | where {_.Xloc -eq new.Xloc} | where {_.Yloc -eq new.Yloc} | where {_.Zloc -eq new.Zloc}
-				if (NewName) {
-					new.ItemName = NewName.ItemName
-				}
-				
-				out += new
-			}#end foreach
-			out
-		*/
-		}
-
-		//Sales
-		public void ItemsPurchased (int setzero) {
-		/*
-			GroupedData = (GetShopData() | Group-Object ItemName | where {_.count -gt 1} | sort count)
-			(GroupedData | 
-			select Name, 
-			@{n="Sold";e={sum=0;_.Group.stockqty | where {_ -ne "Full"} | where {_ -ne "Empty"} | where {_ -match "-"} | %{sum += _};sum}}, 
-			@{n="Purchased";e={sum=0;_.Group.stockqty | where {_ -ne "Full"} | where {_ -ne "Empty"} | where {_ -notmatch "-"} | %{sum += _};sum}} |
-			select Name, Sold, @{n="SoldPctTotal";e={[Math]::round(_.sold / 160100,2)}}, Purchased, @{n="PurchPctTotal";e={[Math]::round(_.Purchased / 92416,2)}}, @{n="Change";e={[Math]::round(_.Purchased + _.sold,2)}} | 
-			select Name, Sold, SoldPctTotal, Purchased, PurchPctTotal, Change, @{n="ChangePctTotal";e={[Math]::round(_.Change / 67684,2)}} | 
-			sort purchased -Descending)[0..10] | ft
-		}
-		*/
-		}
-
-		public void ItemsSold (int setzero) {
-		/*
-			Data = ,
-			GroupedData = (GetShopData() | Group-Object ItemName | where {_.count -gt 1} | sort count)
-			(GroupedData | 
-			select Name, 
-			@{n="Sold";e={sum=0;_.Group.stockqty | where {_ -ne "Full"} | where {_ -ne "Empty"} | where {_ -match "-"} | %{sum += _};sum}}, 
-			@{n="Purchased";e={sum=0;_.Group.stockqty | where {_ -ne "Full"} | where {_ -ne "Empty"} | where {_ -notmatch "-"} | %{sum += _};sum}} |
-			select Name, Sold, @{n="SoldPctTotal";e={[Math]::round(_.sold / 160100,2)}}, Purchased, @{n="PurchPctTotal";e={[Math]::round(_.Purchased / 92416,2)}}, @{n="Change";e={[Math]::round(_.Purchased + _.sold,2)}} | 
-			select Name, Sold, SoldPctTotal, Purchased, PurchPctTotal, Change, @{n="ChangePctTotal";e={[Math]::round(_.Change / 67684,2)}} | 
-			sort sold )[0..10] | ft
-		*/
-		}
-
-		//Discord
-		public void SendDiscordMessage (string content) {
-			string payload = "{\"content\": \"" + content + "\"}";
-			//InvokeWebRequest(webHook, WebRequestMethods.Http.Post, payload,false,true);
-			InvokeWebRequest(moneyMadeBox.Text, WebRequestMethods.Http.Post, payload,false,true);
-		}
-
-		//Automation
-		public void RunBot (int setzero) {
-			string OldData = "";
-			while (true) {
-		/*
-				ShopData = (GetShopData | where {_.event -match "Empty"});
-				content = try{(diff OldData ShopData).inputobject}catch{}
-				#content = (diff ShopData OldData -ErrorAction SilentlyContinue).inputobject;
-				foreach (item in content){
-				#if (content){
-					out = "Empty shop: Player ``(item.PlayerName)`` has purchased the last (item.StockQty) (item.ItemName)!";
-					out
-					Send-DiscordMessage -content out #-WhatIf
-				};
-				OldData = ShopData
-
-				sleep 10
-			}
-		*/
-			}
-		}
-
-		//Reports
 		public void MoneyMade (int setzero) {
 		/*
 			Param(
@@ -554,7 +564,7 @@ Operation:
 			inputfiles = (ls logfolder | where {_.fullname -match "date"} | where {_.fullname -notmatch "gz"})
 			data = (inputfiles | %{ (Get-Content _)})
 			sum = 0;
-			(data| where {_ -match "and you earned"}) -replace " \(","" |%{sum += [float](_ -split "\")[1]};
+			(data| where {_ -match "and you earned"}).Replace(" \(","" |%{sum += [float](_ -split "\")[1]};
 			sum = '{0:N}' -f sum
 			if (NoFormat) {
 				Sum
@@ -601,14 +611,14 @@ Operation:
 			Sold = 0
 			Data | where {_.event -match Values.Buy}  | %{
 				try {
-					Sold += (_.stockqty -replace "-","")
+					Sold += (_.stockqty.Replace("-","")
 				} catch {}
 			}
 			
 			Purchased = 0
 			Data | where {_.event -match Values.Sell}  | %{
 				try {
-					Purchased += (_.stockqty -replace "-","")
+					Purchased += (_.stockqty.Replace("-","")
 				} catch {}
 			}
 			
@@ -628,7 +638,7 @@ Operation:
 				Turnover = "Exact same amount purchased as sold. (This is rare, please double-check.)" 
 			}
 			OOS = (data | where {_.Event -match "Empty"}).count
-			#OOS = (data.StockQty | where {_EVent -match Values.Empty}).count
+			//OOS = (data.StockQty | where {_EVent -match Values.Empty}).count
 			
 		out = ""
 		if (Weekly) {
@@ -646,16 +656,6 @@ Operation:
 		*/
 		}
 
-/* 		//Webhook
-		public void CheckWebhook (int setzero) {
-				webHook = webHookBox.Text;
-				if (webHook.Length > 0) {
-					WebhookPresent = true;
-				} else {
-					WebhookPresent = false;
-				}
-		}
- */
 
 
 
@@ -707,19 +707,17 @@ Operation:
 		
 */
 		//JSON
-/*		public dynamic FromJson(string string_input) {
+		public dynamic FromJson(string string_input) {
 			dynamic dynamic_output = new System.Dynamic.ExpandoObject();
 			dynamic_output = serializer.Deserialize<dynamic>(string_input);
 			return dynamic_output;
 		}
-*/
-		
-/*		public string ToJson(dynamic dynamic_input) {
+
+		public string ToJson(dynamic dynamic_input) {
 			string string_out;
 			string_out = serializer.Serialize(dynamic_input);
 			return string_out;
 		}
-*/
 		//CSV
 		public Dictionary<string, dynamic>[] FromCsv(string csv_in) {
 			//CSV isn't just a 2d object array - it's an array of Dictionary<string,object>, whose string keys are the column headers. 
@@ -914,12 +912,13 @@ Operation:
 		//ui
         public void runButton_Click(object sender, EventArgs e) {
 			outBox.Text = "Run" + Environment.NewLine + outBox.Text;
-			SendDiscordMessage("Run");
+			//SendDiscordMessage("Run");
+			//DeGZip("C:\\Users\\Gilgamech\\AppData\\Roaming\\.minecraft\\logs\\2024-10-03-1.log.gz");
         }// end runButton_Click
 
         public void stopButton_Click(object sender, EventArgs e) {
 			outBox.Text = "Stop" + Environment.NewLine + outBox.Text;
-			SendDiscordMessage("Stop");
+			outBox.Text = String.Join("\n", GetShopData(0)) + Environment.NewLine + outBox.Text;
         }// end stopButton_Click
 
 		public void OnResize(object sender, System.EventArgs e) {
@@ -933,15 +932,37 @@ Operation:
 		//Menu
 		//File
 		public void Open_Log_Folder(object sender, EventArgs e) {
+			Process.Start(logFolder);
 		}// end Open_Log_Folder
 
 		public void Edit_Shop_Name(object sender, EventArgs e) {
+			string input="Edit_Shop_Name";
+			DialogResult result = ShowInputDialog(ref input);
+			switch (result) {
+				case DialogResult.OK:
+					outBox.Text = input + Environment.NewLine + outBox.Text;
+					break;
+			}
 		}// end Edit_Shop_Name
 
 		public void Edit_Shop_Coords(object sender, EventArgs e) {
+			string input="Edit_Shop_Coords";
+			DialogResult result = ShowInputDialog(ref input);
+			switch (result) {
+				case DialogResult.OK:
+					outBox.Text = input + Environment.NewLine + outBox.Text;
+					break;
+			}
 		}// end Edit_Shop_Coords
 
 		public void Edit_Webhook(object sender, EventArgs e) {
+			string input="Edit_Webhook";
+			DialogResult result = ShowInputDialog(ref input);
+			switch (result) {
+				case DialogResult.OK:
+					outBox.Text = input + Environment.NewLine + outBox.Text;
+					break;
+			}
 		}// end Edit_Webhook
 		
 		//Reports
@@ -973,5 +994,16 @@ Operation:
 			MessageBox.Show(AboutText);
 		} // end Link_Click
     }// end AlcoveShopBot
+	
+	public class StockItem  {
+	  public string ItemName;
+	  public int XLoc;
+	  public int YLoc;
+	  public int ZLoc;
+	  public int StockQty;
+	  public string Event;
+	  public string DateTime;
+	  public string PlayerName;
+	}
 }// end ShopBotNamespace
 
