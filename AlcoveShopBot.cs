@@ -16,6 +16,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Configuration;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -31,10 +32,12 @@ using System.Web.Script.Serialization;
 namespace ShopBotNamespace {
     public class AlcoveShopBot : Form {
 //{ Ints
-        public int build = 16;//Get-RebuildCsharpApp AlcoveShopBot
+        public int build = 1139;//Get-RebuildCsharpApp AlcoveShopBot
 		public string appName = "AlcoveShopBot";
-		public static string StoreName = "Alcove";
-		public string appTitle = StoreName + " Shop Bot - Build ";
+		public string StoreName = "Not Loaded";
+		public string StoreCoords = "Not Loaded";
+		public string webHook = "Not Loaded";
+		public string appTitle = " Shop Bot - 1.";
 		
 		/*
 		account = AlcoveShopBot.Properties.Settings.Default.Account;
@@ -57,8 +60,8 @@ namespace ShopBotNamespace {
 		System.Windows.Forms.Timer timer = new System.Windows.Forms.Timer();
 
         public Button runButton, stopButton,sendButton;
-		//public TextBox webHookBox = new TextBox();
 		public TextBox moneyMadeBox = new TextBox();
+		public Label moneyMadeLabel = new Label();
 		public RichTextBox outBox = new RichTextBox();
 		public System.Drawing.Bitmap myBitmap;
 		public System.Drawing.Graphics pageGraphics;
@@ -66,7 +69,6 @@ namespace ShopBotNamespace {
 		
 		public string[] parsedHtml = new string[1];
 		public bool WebhookPresent = false;
-		public string webHook = "https://discord.com/api/webhooks/1386745728314904736/-yTnmKl48zRx-PfSqLV8YIM-lCkZEbKR9kmLfKtGlttvUKeEO7oc3yvERe0Hbrl0YCNF";
 
 		
 		// public static string WindowsUsername = System.Security.Principal.WindowsIdentity.GetCurrent().Name;
@@ -109,12 +111,12 @@ namespace ShopBotNamespace {
  		public static int col9 = gridItemWidth*9;
  		public static int col10 = gridItemWidth*10;
 
-public enum Season
+public enum Values
 {
-    Spring,
-    Summer,
-    Autumn,
-    Winter
+    Empty,
+    Full,
+    Sell,
+    Buy
 }
 
 
@@ -157,23 +159,23 @@ public enum Season
         }// end Main
 
         public AlcoveShopBot() {
-			timer.Interval = (10 * 1000);
-			timer.Tick += new EventHandler(timer_everysecond);
-			timer.Start();
-
-			this.Text = appTitle + build;
+			LoadSetting("StoreName", ref StoreName, "Alcove"); 
+			LoadSetting("StoreCoords", ref StoreCoords, "StoreCoords"); 
+			LoadSetting("webHook", ref webHook, "webHook"); 
+			this.Text = StoreName + appTitle + build;
 			this.Size = new Size(WindowWidth,WindowHeight);
 			this.Resize += new System.EventHandler(this.OnResize);
 			this.AutoScroll = true;
 			// Icon icon = Icon.ExtractAssociatedIcon("C:\\repos\\AlcoveShopBot\\AlcoveShopBot.ico");
 			// this.Icon = icon;
 			buildMenuBar();
-			drawTextBox(ref moneyMadeBox, col0, row0, col2, 0,"Money Made");
- 			drawButton(ref stopButton, col2, row0, col2, row1, "Daily Report", sendButton_Click);
+			drawLabel(ref moneyMadeLabel, col0, row0, col2, row1, "Money made this \nplay session:");
+			drawTextBox(ref moneyMadeBox, col2, row0, col2, 0,"$0");
+ 			//drawButton(ref sendButton, col2, row0, col2, row1, "Daily Report", sendButton_Click);
  			drawButton(ref runButton, col5, row0, col1, row1, "Run", runButton_Click);
- 			drawButton(ref sendButton, col6, row0, col1, row1, "Stop", stopButton_Click);
-			drawRichTextBox(ref outBox, col0,row1,col7,row5,"Transaction Log", "outBox");
-
+ 			drawButton(ref stopButton, col6, row0, col1, row1, "Stop", stopButton_Click);
+			drawRichTextBox(ref outBox, col0, row1, col7, row5,"Transaction Log", "outBox");
+			
 			moneyMadeBox.Font = new Font("Calibri", 14);
 			outBox.Multiline = true;
 			outBox.AcceptsTab = true;
@@ -183,6 +185,9 @@ public enum Season
 			// outBox.ScrollBars = System.Windows.Forms.RichTextBoxScrollBars.None;
 			RunBot(0);
 
+			timer.Interval = (10 * 1000);
+			timer.Tick += new EventHandler(timer_everysecond);
+			timer.Start();
         } // end AlcoveShopBot
 
 		public void buildMenuBar (){
@@ -201,9 +206,7 @@ public enum Season
 			item = new MenuItem("Reports");
 			this.Menu.MenuItems.Add(item);
 				item.MenuItems.Add("Daily", new EventHandler(Daily_Report));
-				item.MenuItems.Add("Weekly", new EventHandler(Weekly_Report));
-				item.MenuItems.Add("Monthly", new EventHandler(Monthly_Report));
-				item.MenuItems.Add("Other", new EventHandler(Other_Report));
+				item.MenuItems.Add("Biweekly", new EventHandler(Biweekly_Report));
 			
 			item = new MenuItem("Help");
 			this.Menu.MenuItems.Add(item);
@@ -216,11 +219,112 @@ public enum Season
 
 //////////////////////////////////////////====================////////////////////////////////////////
 //////////////////////====================--------------------====================////////////////////
+//===================--------------------    Event Handlers   --------------------====================
+//////////////////////====================--------------------====================////////////////////
+//////////////////////////////////////////====================////////////////////////////////////////
+		//timer
+		private void timer_everysecond(object sender, EventArgs e) {
+			RunBot(0);
+		}
+		//ui
+        public void runButton_Click(object sender, EventArgs e) {
+			string action = "Run";
+			outBox.Text = action + Environment.NewLine + outBox.Text;
+			timer.Start();
+        }// end runButton_Click
+
+        public void stopButton_Click(object sender, EventArgs e) {
+			string action = "Stop";
+			outBox.Text = action + Environment.NewLine + outBox.Text;
+			timer.Stop();
+        }// end stopButton_Click
+
+		public void OnResize(object sender, System.EventArgs e) {
+		}
+		//Menu
+		//File
+		public void Open_Log_Folder(object sender, EventArgs e) {
+			Process.Start(logFolder);
+		}// end Open_Log_Folder
+
+		public void Edit_Store_Name(object sender, EventArgs e) {
+			DialogResult result = drawInputDialog(ref StoreName, "Enter store name");
+			switch (result) {
+				case DialogResult.OK:
+					AddOrUpdateSetting("StoreName", StoreName);
+					this.Text = StoreName + appTitle + build;
+					break;
+			}
+		}// end Edit_Store_Name
+
+		public void Edit_Store_Coords(object sender, EventArgs e) {
+			DialogResult result = drawInputDialog(ref StoreCoords, "Enter store coordiantes (still to-do).");
+			switch (result) {
+				case DialogResult.OK:
+					AddOrUpdateSetting("StoreCoords", StoreCoords);
+					break;
+			}
+		}// end Edit_Store_Coords
+
+		public void Edit_Webhook(object sender, EventArgs e) {
+			DialogResult result = drawInputDialog(ref webHook, "Paste your webhook URL here.");
+			switch (result) {
+				case DialogResult.OK:
+					AddOrUpdateSetting("Webhook", webHook);
+					break;
+			}
+		}// end Edit_Webhook
+		
+		//Reports
+		public void Daily_Report(object sender, EventArgs e) {
+			var now = DateTime.Now;
+			string day = now.AddDays(-1).ToString("dd");
+			DialogResult result = drawInputDialog(ref day, "Day of month to report.");
+			switch (result) {
+				case DialogResult.OK:
+					outBox.Text = BuildDailyReport(Convert.ToInt32(day)) + Environment.NewLine + outBox.Text;
+					break;
+			}
+		}// end Daily_Report
+		
+		public void Biweekly_Report(object sender, EventArgs e) {
+			string days = "14";
+			DialogResult result = drawInputDialog(ref days, "Days in report.");
+			switch (result) {
+				case DialogResult.OK:
+					outBox.Text = BuildBiweeklyReport(Convert.ToInt32(days)) + Environment.NewLine + outBox.Text;
+					break;
+			}
+		}// end Weekly_Report
+			
+		//Help
+		public void About_Click (object sender, EventArgs e) {
+			string AboutText = "Alcove Shop Bot" + Environment.NewLine;
+			AboutText += "Generates out-of-stock alerts and financial reports from QuickShop" + Environment.NewLine;
+			AboutText += "Buy/Sell comments in Minecraft chat logs. Made for The Alcove player" + Environment.NewLine;
+			AboutText += "-run store on the ChillSMP Minecraft server. But this product isn't" + Environment.NewLine;
+			AboutText += "affiliated with any of those." + Environment.NewLine;
+			AboutText += "" + Environment.NewLine;
+			AboutText += "Version 1." + build + Environment.NewLine;
+			AboutText += "(C) 2025 Gilgamech Technologies" + Environment.NewLine;
+			AboutText += "" + Environment.NewLine;
+			AboutText += "Report bugs & request features:" + Environment.NewLine;
+			AboutText += "ShopBot@Gilgamech.com" + Environment.NewLine;
+			MessageBox.Show(AboutText);
+		} // end Link_Click
+
+
+
+
+
+
+//////////////////////////////////////////====================////////////////////////////////////////
+//////////////////////====================--------------------====================////////////////////
 //====================--------------------      Main     --------------------====================//
 //////////////////////====================--------------------====================////////////////////
 //////////////////////////////////////////====================////////////////////////////////////////
 		public void RunBot (int setzero) {
-			moneyMadeBox.Text = MoneyMade(0,false,true);
+			moneyMadeBox.Text = MoneyMade(0,"",false,true);
 			List<StockItem> ShopData = GetShopData("");
 			ShopData = ShopData.Where(s => s.Event.Contains("Empty")).ToList();
 			ShopData =  ShopData.Where(s => !OldData.Any(o => o.Timestamp.Contains(s.Timestamp))).ToList();
@@ -232,7 +336,7 @@ public enum Season
 				foreach (StockItem item in ShopData) {
 					string out_msg = "Empty shop: Player `" + item.PlayerName + "` has purchased the last "+ item.StockQty + " " + item.ItemName+"!";
 					outBox.Text = "[" + item.Timestamp + "] " +  out_msg + Environment.NewLine + outBox.Text;
-					//SendDiscordMessage(out_msg);
+					SendDiscordMessage(out_msg);
 				};
 			OldData.AddRange(ShopData);
 			// outBox.Text = "ShopData After:" + serializer.Serialize(ShopData) + Environment.NewLine + outBox.Text;
@@ -258,9 +362,6 @@ public enum Season
 						//outBox.Text = fiileString + Environment.NewLine + outBox.Text;
 						string[] fileContents = fiileString.Replace("] [Render thread/INFO]: [System] [CHAT] ",",").Split('\n');
 						Data.AddRange(fileContents.Where(d => d.Contains("SHOPS ▶ ")).ToList());
-						Data = Data.Where(d => !d.Contains("Enter all in chat")).ToList();
-						Data = Data.Where(d => !d.Contains("out of space")).ToList();
-						Data = Data.Where(d => !d.Contains("how many you wish")).ToList();
 					}
 				//outBox.Text = "FileStream Success."+ Logfile + " count: " + Data.Count + Environment.NewLine + outBox.Text;
 					logFileReader.Close();
@@ -271,18 +372,18 @@ public enum Season
 				try {
 			string[] fileContents = GetContent(Logfile, true).Replace("] [Render thread/INFO]: [System] [CHAT] ",",").Split('\n');
 			Data.AddRange(fileContents.Where(d => d.Contains("SHOPS ▶ ")).ToList());
-			Data = Data.Where(d => !d.Contains("Enter all in chat")).ToList();
-			Data = Data.Where(d => !d.Contains("out of space")).ToList();
-			Data = Data.Where(d => !d.Contains("how many you wish")).ToList();
 				//outBox.Text = "GetContent Success."+ Logfile + " count: " + Data.Count + Environment.NewLine + outBox.Text;
 				} catch (Exception GetContentError) {
 					outBox.Text = "GetContentError: " + GetContentError.Message + Environment.NewLine + outBox.Text;
 					fiileString = FileStreamError.Message + "; " + GetContentError.Message;
 				}
 			}
+			Data = Data.Where(d => !d.Contains("Enter all in chat")).ToList();
+			Data = Data.Where(d => !d.Contains("out of space")).ToList();
+			Data = Data.Where(d => !d.Contains("how many you wish")).ToList();
 
 
-			//Data = Data | where {_ -notmatch ""}
+			//Data = Data.Where(x => x.notmatch("");
 			foreach (string Item in Data) {
 				n++;
 				stockitem = new StockItem();
@@ -343,38 +444,22 @@ public enum Season
 		return out_var;
 		}
 		
-/*
-			//string[] fileContents = Encoding.UTF8.GetString(System.IO.File.ReadAllBytes(LatestLog)).Replace("] [Render thread/INFO]: [System] [CHAT] ",",").Split('\n');
-			//Working w locks-----> string[] fileContents = GetContent(LatestLog).Replace("] [Render thread/INFO]: [System] [CHAT] ",",").Split('\n');
-			//string[] fileContents = GetContent(LatestLog).Replace("] [Render thread/INFO]: [System] [CHAT] ","RemoveTimeSpecialTokenYouShouldNeverSeeThis]\n").Split('\n');
-		//List<string> DataArray = new []{ Data };// select-string "SHOPS ▶ " | Where {_ -notmatch "Enter all in chat"}).Replace("\[Render thread/INFO\]: \[System\] \[CHAT\] SHOPS ▶ ","")
-			// string EmptyText = "*has run out of*";//[06:07:40] Your shop at 15226, 63, 20487 has run out of Cocoa Beans!
-			//[07:12:51] [Render thread/INFO]: [System] [CHAT] SHOPS ▶ This shop has run out of space! Contact the shop owner or staff to get it emptied.
-			// string FullText = "*is now full*";//[05:33:18] Your shop at 15274, 66, 20463 is now full.
-			// string SellText = "*to your shop*";//[05:40:12] kota490 sold 1728 Sea Lantern to your shop {3}.
-			// string BuyText = "*from your shop*";//[05:47:12] _Blackjack29313 purchased 2 Grindstone from your shop and you earned 9.50 (0.50 in taxes).
-			//dynamic[] NameData = FromCsv(GetContent(DataFile));
-			//Data = Data.Where(d => !d.Contains("RemoveTimeSpecialTokenYouShouldNeverSeeThis")).ToList();
-
-
-						// outBox.Text = stockitem.Event + " - " + Environment.NewLine + outBox.Text;
-				//var NewName = NameData.Where(x => x["XLoc"] = stockitem.XLoc).Where(x => x["YLoc"] = stockitem.YLoc).Where(x => x["ZLoc"] = stockitem.ZLoc);
-				//if (NewName != null) {
-					//stockitem.ItemName = NewName.ToString();//["ItemName"]
-				//}
-*/
 		//Reports
-		public string[] DecompressDailyFiles (int day = 0) {
+		public string[] DecompressDailyFiles (int day = 0, string Date = "") {
 			  var now = DateTime.Now;
 			if (day == 0) {
 				day = Convert.ToInt32(now.AddDays(-1).ToString("dd"));
 			}
-			string date = new DateTime(now.Year, now.Month, day).ToString("yyyy-MM-dd");
-			string[] UnzipFiles = Directory.GetFileSystemEntries(logFolder, date + "*.log.gz", SearchOption.AllDirectories);
-			foreach (string Filename in UnzipFiles) {
-				DeGZip(Filename);
+			if (Date == "") {
+				Date = new DateTime(now.Year, now.Month, day).ToString("yyyy-MM-dd");
 			}
-			string[] inputfiles = Directory.GetFileSystemEntries(logFolder, date + "*.log", SearchOption.AllDirectories);
+			string[] UnzipFiles = Directory.GetFileSystemEntries(logFolder, Date + "*.log.gz", SearchOption.AllDirectories);
+			foreach (string Filename in UnzipFiles) {
+				try {
+					DeGZip(Filename);
+				} catch {}
+			}
+			string[] inputfiles = Directory.GetFileSystemEntries(logFolder, Date + "*.log", SearchOption.AllDirectories);
 			return inputfiles;
 		}
 		
@@ -396,128 +481,475 @@ public enum Season
 			return Data;
 		}
 
-		public string MoneyMade (int day = 0, bool Format = false, bool Today = false) {
+		public string MoneyMade (int day = 0, string Date = "", bool Format = false, bool Today = false) {
 			string sum_string = null;
-			  var now = DateTime.Now;
+			var now = DateTime.Now;
 			int Sum = 0;
-			string Data = null;
-			
+			string Data = "\n";
 			if (Today) {
 				day = now.Day;
-				Data  += OldGetContent(LatestLog);
-				
+
+
+			try {
+					FileStream logFileStream = new FileStream(LatestLog, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+					StreamReader logFileReader = new StreamReader(logFileStream);
+					while (!logFileReader.EndOfStream) {
+						Data = logFileReader.ReadLine();
+					}
+				//outBox.Text = "FileStream Success."+ Logfile + " count: " + Data.Count + Environment.NewLine + outBox.Text;
+					logFileReader.Close();
+					logFileStream.Close();
+
+			} catch (Exception FileStreamError) {
+				outBox.Text = "FileStreamError: " + FileStreamError.Message + Environment.NewLine + outBox.Text;
+			}
+			
 			} else {
 				if (day == 0) {
 					day = Convert.ToInt32(now.AddDays(-1).ToString("dd"));
 				} 
 				string[] inputfiles = DecompressDailyFiles(day);
+				if (Date == "") {
+					Date = new DateTime(now.Year, now.Month, day).ToString("yyyy-MM-dd");
+					inputfiles = DecompressDailyFiles(0, Date);
+				}
 				GetShopData(LatestLog); //Reading the log seems to nudge the filesystem into writing the gzip data.
 				
-				//outBox.Text = "inputfiles: " + inputfiles.Count() + Environment.NewLine + outBox.Text;
-				//outBox.Text = "inputfiles: " + serializer.Serialize(inputfiles) + Environment.NewLine + outBox.Text;
 				foreach (string Filename in inputfiles) {
-					Data  += OldGetContent(Filename);
+			try {
+					FileStream logFileStream = new FileStream(Filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+					StreamReader logFileReader = new StreamReader(logFileStream);
+					while (!logFileReader.EndOfStream) {
+						Data = logFileReader.ReadLine();
+					}
+				//outBox.Text = "FileStream Success."+ Logfile + " count: " + Data.Count + Environment.NewLine + outBox.Text;
+					logFileReader.Close();
+					logFileStream.Close();
+
+			} catch (Exception FileStreamError) {
+				outBox.Text = "FileStreamError: " + FileStreamError.Message + Environment.NewLine + outBox.Text;
+			}
 				}
 			}
 			string[] split_data = Data.Split('\n');
 			split_data = split_data.Where(s => s.Contains("and you earned")).ToArray();
 			foreach (string Datum in split_data) {
 				string split = Datum.Split('$')[1].Replace(" (","");
-				//outBox.Text = split + Environment.NewLine + outBox.Text;
-
 				int number;
 				int.TryParse(split, out number);
 				Sum += number;
 			}
 			sum_string = Sum.ToString("C2");
-			string date = new DateTime(now.Year, now.Month, day).ToString("yyyy-MM-dd");
 			if (Format) {
-				sum_string = date + " Alcove made " + sum_string;
+				sum_string = Date + " Alcove made " + sum_string;
 			}
-				return sum_string;
+			return sum_string;
 		}
 
-		public void BuildDailyReport (int setzero, bool Weekly = false) {
-		/*
-			Param(
-				day = (Get-Date (Get-Date).AddDays(-1) -f dd),
-				date = (get-date -Day day -f "yyyy-MM-dd"),
-			)
-			Data = Get-DailyData -day day -date date -Silent
+		public string GetDailySales (int day = 0, string Date = "", bool Weekly = false, List<StockItem> Data = null, string LogFile = "") {
+			string string_out = "";
+			string Turnover = "";
+			string string_Sold = "";
+			string string_Purchased = "";
+			var now = DateTime.Now;
+
+			if (LogFile == "") {
+				LogFile = LatestLog;
+			}
+			if (day == 0) {
+				day = Convert.ToInt32(now.AddDays(-1).ToString("dd"));
+			}
+			if (Date == "") {
+				Date = new DateTime(now.Year, now.Month, day).ToString("yyyy-MM-dd");
+			}
+
+			int Sold = 0;
+			int Purchased = 0;
+			if (Data == null) {
+				Data = GetShopData (LogFile).Where(d => d.Event != null).ToList();
+			}
+			foreach (StockItem Datum in Data.Where(d => d.Event == Values.Buy.ToString()).ToList()) {
+				int number;
+				int.TryParse(Datum.StockQty.ToString().Replace("-",""), out number);
+				Sold += number;
+			}
+			foreach (StockItem Datum in Data.Where(d => d.Event == Values.Sell.ToString()).ToList()) {
+				int number;
+				int.TryParse(Datum.StockQty.ToString().Replace("-",""), out number);
+				Purchased += number;
+			}
+			if (Purchased > Sold) {
+				Turnover = (Purchased - Sold) + "more purchased than sold.";
+			} else if (Purchased < Sold) {
+				Turnover = (Sold - Purchased) + "more sold than purchased.";
+			} else {
+				Turnover = "Exact same amount purchased as sold. (This is rare, please double-check.)";
+			}
+			string_Sold = Sold.ToString("C2");
+			string_Purchased = Purchased.ToString("C2");
+			
+			int OOS = Data.Where(d => d.Event == Values.Empty.ToString()).ToList().Count();
+			
 			if (Weekly) {
-				GetDailySales -Data Data -Date (Get-Date (get-date date) -Format "MMMM d") -Weekly
+				if (Turnover == "Exact same amount purchased as sold. (This is rare, please double-check.)") {
+					Turnover = "Same";
+				}
+				string spacer = " | ";
+				string_out = Date + spacer + Sold+ spacer +  Purchased+ spacer + Turnover + spacer + OOS;
 			} else {
-				GetDailySales -Data Data -Date (Get-Date (get-date date) -Format "MMMM d")
+				string_out = "Daily sales report for" + Date + ":\n- Sold: " + Sold + ":\n- Purchased: " + Purchased + ":\n- Turnover: " + Turnover + "\n- Out of stocks: " + OOS;
 			}
-		*/
+		return string_out;
 		}
 
-		public void BuildWeeklyReport (int days = 14) {
-		/*
-			"Date | Sold | Purchased | Turnover | OOS | Revenue"
-			(days +1)..1 | %{
-				date = (get-date (get-date).AddDays(-_) -f "yyyy-MM-dd")
+		public string BuildDailyReport (int day = 0, string Date = "", bool Weekly = false) {
+			var now = DateTime.Now;
+			if (day == 0) {
+				day = Convert.ToInt32(now.AddDays(-1).ToString("dd"));
+			}
+			if (Date == "") {
+				Date = new DateTime(now.Year, now.Month, day).ToString("yyyy-MM-dd");
+			}
+			List<StockItem> ShopData = DailyData (day);
+			return GetDailySales(0, Date, Weekly, ShopData);
+		}
+
+		public string BuildBiweeklyReport (int days = 14) {
+			var now = DateTime.Now;
+			string string_out = "Date | Sold | Purchased | Turnover | OOS | Revenue\n";
 				
-				Report = Get-BuildDailyReport -date date -Silent -Weekly;
-				MoneyMade = Get-MoneyMade -date date -NoFormat
-				Report + " | MoneyMade"
+			for (int day = (days +1); day>0; day--) {
+				string Date = new DateTime(now.Year, now.Month, day).ToString("yyyy-MM-dd");
+				string Report = BuildDailyReport (0, Date, true);
+				MoneyMade(0);
+				string moneyMade = "MoneyMade";
+				string_out +=  Report + " | " + moneyMade + "\n";
 			}
-		*/
+			return string_out;
 		}
 
-		public void GetDailySales (int setzero) {
-		/* 
-				Data = (GetShopData -LatestLog LatestLog | where {_.event}),
-				Date = (Get-Date (get-date).AddDays(-1) -Format "MMMM d"),
-				[switch]Weekly
 
-			Sold = 0
-			Data | where {_.event -match Values.Buy}  | %{
-				try {
-					Sold += (_.stockqty.Replace("-","")
-				} catch {}
+
+
+
+
+//////////////////////////////////////////====================////////////////////////////////////////
+//////////////////////====================--------------------====================////////////////////
+//===================--------------------   Utility Functions  --------------------====================
+//////////////////////====================--------------------====================////////////////////
+//////////////////////////////////////////====================////////////////////////////////////////
+/*Powershell functional equivalency imperatives
+		Get-Clipboard = Clipboard.GetText();
+		Get-Date = Timestamp.Now.ToString("M/d/yyyy");
+		Get-Process = public Process[] processes = Process.GetProcesses(); or var processes = Process.GetProcessesByName("Test");
+		New-Item = Directory.CreateDirectory(Path) or File.Create(Path);
+		Remove-Item = Directory.Delete(Path) or File.Delete(Path);
+		Get-ChildItem = string[] entries = Directory.GetFileSystemEntries(path, "*", SearchOption.AllDirectories);
+		Start-Process = System.Diagnostics.Process.Start("PathOrUrl");
+		Stop-Process = StopProcess("ProcessName");
+		Start-Sleep = Thread.Sleep(GitHubRateLimitDelay);
+		Get-Random - Random rnd = new Random(); or int month  = rnd.Next(1, 13);  or int card   = rnd.Next(52);
+		Create-Archive = ZipFile.CreateFromDirectory(dataPath, zipPath);
+		Expand-Archive = ZipFile.ExtractToDirectory(zipPath, extractPath);
+		Sort-Object = .OrderBy(n=>n).ToArray(); and -Unique = .Distinct(); Or Array.Sort(strArray); or List
+		
+		Get-VM = GetVM("VMName");
+		Start-VM = SetVMState("VMName", 2);
+		Stop-VM = SetVMState("VMName", 4);
+		Stop-VM -TurnOff = SetVMState("VMName", 3);
+		Reboot-VM = SetVMState("VMName", 10);
+		Reset-VM = SetVMState("VMName", 11);
+		
+		Diff
+		var inShopDataButNotInOldData = ShopData.Except(OldData);
+		var inOldDataButNotInShopData = OldData.Except(ShopData);
+		
+*/
+		public string findIndexOf(string pageString,string startString,string endString,int startPlus,int endPlus){
+			return pageString.Substring(pageString.IndexOf(startString)+startPlus, pageString.IndexOf(endString) - pageString.IndexOf(startString)+endPlus);
+        }// end findIndexOf
+
+		public void DeGZip (string infile) {
+			string outfile = infile.Replace(".gz","");
+			FileStream compressedFileStream = File.Open(infile, FileMode.Open);
+			FileStream outputFileStream = File.Create(outfile);
+			var decompressor = new GZipStream(compressedFileStream, CompressionMode.Decompress);
+			decompressor.CopyTo(outputFileStream);
+		}
+		//JSON
+		public dynamic FromJson(string string_input) {
+			dynamic dynamic_output = new System.Dynamic.ExpandoObject();
+			dynamic_output = serializer.Deserialize<dynamic>(string_input);
+			return dynamic_output;
+		}
+
+		public string ToJson(dynamic dynamic_input) {
+			string string_out;
+			string_out = serializer.Serialize(dynamic_input);
+			return string_out;
+		}
+		//CSV
+		public Dictionary<string, dynamic>[] FromCsv(string csv_in) {
+			//CSV isn't just a 2d object array - it's an array of Dictionary<string,object>, whose string keys are the column headers. 
+			string[] Rows = csv_in.Replace("\r\n","\n").Replace("\"","").Split('\n');
+			string[] columnHeaders = Rows[0].Split(',');
+			Dictionary<string, dynamic>[] matrix = new Dictionary<string, dynamic> [Rows.Length];
+			try {
+				for (int row = 1; row < Rows.Length; row++){
+					matrix[row] = new Dictionary<string, dynamic>();
+					//Need to enumerate values to create first row.
+					string[] rowData = Rows[row].Split(',');
+					try {
+						for (int col = 0; col < rowData.Length; col++){
+							//Need to record or access first row to match with values. 
+							matrix[row].Add(columnHeaders[col].ToString(), rowData[col]);
+						}
+					} catch {
+					}
+				}
+			} catch {
 			}
-			
-			Purchased = 0
-			Data | where {_.event -match Values.Sell}  | %{
-				try {
-					Purchased += (_.stockqty.Replace("-","")
-				} catch {}
+			return matrix;
+		}
+
+		public string ToCsv(Dictionary<string, dynamic>[] matrix) {
+			string csv_out = "";
+			//Arrays seem to have a buffer row above and below the data.
+			int topRow = 1;
+			Dictionary<string, dynamic> headerRow = matrix[topRow];
+			//Write header row (th). Support for multi-line headers maybe someday but not today. 
+			if (headerRow != null) {
+				string[] columnHeaders = new string[headerRow.Keys.Count];
+				headerRow.Keys.CopyTo(columnHeaders, 0);
+				//var a = matrix[0].Keys;
+				foreach (string columnHeader in columnHeaders){
+						csv_out += columnHeader.ToString()+",";
+				}
+				csv_out = csv_out.TrimEnd(',');
+				// Write data rows (td).
+				for (int row = topRow; row < matrix.Length -1; row++){
+					csv_out += "\n";
+					foreach (string columnHeader in columnHeaders){
+						csv_out += matrix[row][columnHeader]+",";
+					}
+					csv_out = csv_out.TrimEnd(',');
+				}
 			}
+			csv_out += "\n";
+			return csv_out;
+		}
+		//File
+		//Non-locking alternative: System.IO.File.ReadAllBytes(Filename);
+		public string GetContent(string Filename, bool NoErrorMessage = false) {
+			string fiileString = null;
+			try {
+			outBox.Text = "fiileString Start" +  Environment.NewLine + outBox.Text;
 			
-			If (Purchased -gt Sold) {
-				TurnoverAmt = Purchased - Sold
-				TurnoverAmt = '{0:N0}' -f TurnoverAmt
-				Sold = '{0:N0}' -f Sold
-				Purchased = '{0:N0}' -f Purchased
-				Turnover = "TurnoverAmt more purchased than sold." 
-			} elseif (Purchased -lt Sold) {
-				TurnoverAmt = Sold - Purchased
-				TurnoverAmt = '{0:N0}' -f TurnoverAmt
-				Sold = '{0:N0}' -f Sold
-				Purchased = '{0:N0}' -f Purchased
-				Turnover = "TurnoverAmt more sold than purchased." 
+			FileStream logFileStream = new FileStream(Filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+			StreamReader logFileReader = new StreamReader(logFileStream);
+			while (!logFileReader.EndOfStream) {
+				outBox.Text = "fiileString While" +  Environment.NewLine + outBox.Text;
+				fiileString = logFileReader.ReadLine();
+				outBox.Text = fiileString.Length + Environment.NewLine + outBox.Text;
+			}
+			//outBox.Text = "FileStream Success."+ fiileString.Length + Environment.NewLine + outBox.Text;
+			logFileReader.Close();
+			logFileStream.Close();
+			} catch (Exception e){
+				outBox.Text = "OldGetContent Error."+ e.Message + Environment.NewLine + outBox.Text;
+			}
+			return fiileString;
+		}
+		public string OldGetContent(string Filename, bool NoErrorMessage = false) {
+			string string_out = "";
+			try {
+				// Open the text file using a stream reader.
+				using (var sr = new StreamReader(Filename)) {
+					// Read the stream as a string, and write the string to the console.
+					string_out = sr.ReadToEnd();
+				}
+			} catch (Exception e){
+				outBox.Text = "OldGetContent Error."+ e.Message + Environment.NewLine + outBox.Text;
+			}
+			return string_out;
+		}
+
+		public void OutFile(string path, object content, bool Append = false) {
+			//From SO: Use "typeof" when you want to get the type at compilation time. Use "GetType" when you want to get the type at execution time. "is" returns true if an instance is in the inheritance tree.
+			if (TestPath(path) == "None") {
+				File.Create(path).Close();
+			}
+			if (content.GetType() == typeof(string)) {
+				string out_content = (string)content;
+			//From SO: File.WriteAllLines takes a sequence of strings - you've only got a single string. If you only want your file to contain that single string, just use File.WriteAllText.
+				if (Append == true) {
+					File.AppendAllText(path, out_content, Encoding.ASCII);//string
+				} else {
+					File.WriteAllText(path, out_content, Encoding.ASCII);//string
+				}
 			} else {
-				Turnover = "Exact same amount purchased as sold. (This is rare, please double-check.)" 
+				IEnumerable<string> out_content = (IEnumerable<string>)content;
+				if (Append == true) {
+					File.AppendAllLines(path, out_content, Encoding.ASCII);//IEnumerable<string>'
+				} else {
+					File.WriteAllLines(path, out_content, Encoding.ASCII);//string[]
+				}				
 			}
-			OOS = (data | where {_.Event -match "Empty"}).count
-			//OOS = (data.StockQty | where {_EVent -match Values.Empty}).count
-			
-		out = ""
-		if (Weekly) {
-		out = "(Date) | Sold | Purchased | TurnoverAmt | OOS"
-		} else {
-		out = "Daily sales report for (Date):
-		- Sold: Sold
-		- Purchased: Purchased
-		- Turnover: Turnover
-		- Out of stocks: OOS"
-			
 		}
-		return out 	
+
+		public void RemoveItem(string Path,bool remake = false){
+			if (TestPath(Path) == "File") {
+				File.Delete(Path);
+				if (remake) {
+					File.Create(Path);
+				}
+			} else if (TestPath(Path) == "Directory") {
+				Directory.Delete(Path, true);
+				if (remake) {
+					Directory.CreateDirectory(Path);
+				}
+			}
 		}
-		*/
+
+		public string TestPath(string path) {
+				string string_out = "";
+				if (path != null) {
+						path = path.Trim();
+					if (Directory.Exists(path)) {
+						string_out = "Directory";
+					} else if (File.Exists(path)) {
+						string_out = "File";
+					} else {// neither file nor directory exists. guess intention
+						string_out = "None";
+					}
+				} else {// neither file nor directory exists. guess intention
+					string_out = "Empty";
+				}
+				return string_out;
+			}
+		//Web
+		public string InvokeWebRequest(string Url, string Method = WebRequestMethods.Http.Get, string Body = "",bool Authorization = false,bool JSON = false){ 
+			string response_out = "";
+
+				// SSL stuff
+				//ServicePointManager.Expect100Continue = true;
+				ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+
+				HttpWebRequest request = (HttpWebRequest)WebRequest.Create(Url);
+				
+				if (JSON == true) {
+					request.ContentType = "application/json";
+				}
+				if (Authorization == true) {
+					//request.Headers.Add("Authorization", "Bearer "+webHook);
+					//request.Headers.Add("X-GitHub-Api-build", "2022-11-28");
+					request.PreAuthenticate = true;
+				}
+
+				request.Method = Method;
+				request.ContentType = "application/json;charset=utf-8";
+				request.Accept = "application/vnd.github+json";
+				request.UserAgent = "WinGetApprovalPipeline";
+
+			 //Check Headers
+			 // for (int i=0; i < response.Headers.Count; ++i)  {
+				// outBox_msg.AppendText(Environment.NewLine + "Header Name : " + response.Headers.Keys[i] + "Header value : " + response.Headers[i]);
+			 // }
+
+			try {
+				if ((Body == "") || (Method ==WebRequestMethods.Http.Get)) {
+				} else {
+					var data = Encoding.Default.GetBytes(Body); // note: choose appropriate encoding
+					request.ContentLength = data.Length;
+					var newStream = request.GetRequestStream(); // get a ref to the request body so it can be modified
+					newStream.Write(data, 0, data.Length);
+					newStream.Close();
+				} 
+
+				} catch (Exception e) {
+					//MessageBox.Show("Wrong request!" + ex.Message, "Error");
+					response_out = "Request Error: " + e.Message;
+				}
+				
+				try {
+					HttpWebResponse response = (HttpWebResponse)request.GetResponse();
+					StreamReader sr = new StreamReader(response.GetResponseStream());
+					if (Method == "Head") {
+						string response_text = response.StatusCode.ToString();
+						response_out = response_text;
+
+					} else {
+						string response_text = sr.ReadToEnd();
+						response_out = response_text;
+					}
+					sr.Close();
+				} catch (Exception e) {
+					response_out = "Response Error: " + e.Message;
+				}
+		return response_out;
+		}// end InvokeWebRequest	
+		//Discord
+		public void SendDiscordMessage (string content) {
+			string payload = "{\"content\": \"" + content + "\"}";
+			if (webHook.Contains("http")) {
+				InvokeWebRequest(webHook, WebRequestMethods.Http.Post, payload,false,true);
+			}
 		}
+
+        public string ReadSetting(string key) {
+			string result = "Not Found";
+            try {
+                var appSettings = ConfigurationManager.AppSettings;
+                result = appSettings[key] ?? "Not Found";
+            } catch (ConfigurationErrorsException) {
+				outBox.Text = "Error reading app settings" + Environment.NewLine + outBox.Text;
+            }
+			return result;
+        }
+
+        public void DeleteSetting(string key) {
+            try {
+                var configFile = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
+                var settings = configFile.AppSettings.Settings;
+                if (settings[key] == null) {
+                } else {
+                    settings.Remove(key);
+                }
+                configFile.Save(ConfigurationSaveMode.Modified);
+                ConfigurationManager.RefreshSection(configFile.AppSettings.SectionInformation.Name);
+            } catch (ConfigurationErrorsException) {
+				outBox.Text = "Error reading app settings" + Environment.NewLine + outBox.Text;
+            }
+        }
+
+        public void AddOrUpdateSetting(string key, string value) {
+            try {
+                var configFile = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
+                var settings = configFile.AppSettings.Settings;
+                if (settings[key] == null) {
+                    settings.Add(key, value);
+                } else {
+                    settings[key].Value = value;
+                }
+                configFile.Save(ConfigurationSaveMode.Modified);
+                ConfigurationManager.RefreshSection(configFile.AppSettings.SectionInformation.Name);
+            } catch (ConfigurationErrorsException) {
+				outBox.Text = "Error reading app settings" + Environment.NewLine + outBox.Text;
+            }
+        }
+		
+        public void LoadSetting(string key, ref string value, string defaultValue) {
+			if (value == "Not Loaded") {
+				value = ReadSetting(key);
+				if (value == "Not Found") {
+					value = defaultValue;
+					AddOrUpdateSetting(key, value);
+				}
+			}
+        }
+
+
+
 
 
 
@@ -682,13 +1114,13 @@ public enum Season
 			Controls.Add(statusStrip);
 		}
 		
-		public static DialogResult drawInputDialog(ref string input) {
+		public static DialogResult drawInputDialog(ref string input, string boxTitle) {
 			System.Drawing.Size size = new System.Drawing.Size(200, 70);
 			Form inputBox = new Form();
 
 			inputBox.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
 			inputBox.ClientSize = size;
-			inputBox.Text = "Name";
+			inputBox.Text = boxTitle;
 
 			System.Windows.Forms.TextBox textBox = new TextBox();
 			textBox.Size = new System.Drawing.Size(size.Width - 10, 23);
@@ -719,378 +1151,6 @@ public enum Season
 			input = textBox.Text;
 			return result;
 		}
-
-
-
-
-
-
-//////////////////////////////////////////====================////////////////////////////////////////
-//////////////////////====================--------------------====================////////////////////
-//===================--------------------   Utility Functions  --------------------====================
-//////////////////////====================--------------------====================////////////////////
-//////////////////////////////////////////====================////////////////////////////////////////
-/*Powershell functional equivalency imperatives
-		Get-Clipboard = Clipboard.GetText();
-		Get-Date = Timestamp.Now.ToString("M/d/yyyy");
-		Get-Process = public Process[] processes = Process.GetProcesses(); or var processes = Process.GetProcessesByName("Test");
-		New-Item = Directory.CreateDirectory(Path) or File.Create(Path);
-		Remove-Item = Directory.Delete(Path) or File.Delete(Path);
-		Get-ChildItem = string[] entries = Directory.GetFileSystemEntries(path, "*", SearchOption.AllDirectories);
-		Start-Process = System.Diagnostics.Process.Start("PathOrUrl");
-		Stop-Process = StopProcess("ProcessName");
-		Start-Sleep = Thread.Sleep(GitHubRateLimitDelay);
-		Get-Random - Random rnd = new Random(); or int month  = rnd.Next(1, 13);  or int card   = rnd.Next(52);
-		Create-Archive = ZipFile.CreateFromDirectory(dataPath, zipPath);
-		Expand-Archive = ZipFile.ExtractToDirectory(zipPath, extractPath);
-		Sort-Object = .OrderBy(n=>n).ToArray(); and -Unique = .Distinct(); Or Array.Sort(strArray); or List
-		
-		Get-VM = GetVM("VMName");
-		Start-VM = SetVMState("VMName", 2);
-		Stop-VM = SetVMState("VMName", 4);
-		Stop-VM -TurnOff = SetVMState("VMName", 3);
-		Reboot-VM = SetVMState("VMName", 10);
-		Reset-VM = SetVMState("VMName", 11);
-		
-		Diff
-		var inShopDataButNotInOldData = ShopData.Except(OldData);
-		var inOldDataButNotInShopData = OldData.Except(ShopData);
-		
-*/
-		public string findIndexOf(string pageString,string startString,string endString,int startPlus,int endPlus){
-			return pageString.Substring(pageString.IndexOf(startString)+startPlus, pageString.IndexOf(endString) - pageString.IndexOf(startString)+endPlus);
-        }// end findIndexOf
-
-		public void DeGZip (string infile) {
-			string outfile = infile.Replace(".gz","");
-			FileStream compressedFileStream = File.Open(infile, FileMode.Open);
-			FileStream outputFileStream = File.Create(outfile);
-			var decompressor = new GZipStream(compressedFileStream, CompressionMode.Decompress);
-			decompressor.CopyTo(outputFileStream);
-		}
-		//JSON
-		public dynamic FromJson(string string_input) {
-			dynamic dynamic_output = new System.Dynamic.ExpandoObject();
-			dynamic_output = serializer.Deserialize<dynamic>(string_input);
-			return dynamic_output;
-		}
-
-		public string ToJson(dynamic dynamic_input) {
-			string string_out;
-			string_out = serializer.Serialize(dynamic_input);
-			return string_out;
-		}
-		//CSV
-		public Dictionary<string, dynamic>[] FromCsv(string csv_in) {
-			//CSV isn't just a 2d object array - it's an array of Dictionary<string,object>, whose string keys are the column headers. 
-			string[] Rows = csv_in.Replace("\r\n","\n").Replace("\"","").Split('\n');
-			string[] columnHeaders = Rows[0].Split(',');
-			Dictionary<string, dynamic>[] matrix = new Dictionary<string, dynamic> [Rows.Length];
-			try {
-				for (int row = 1; row < Rows.Length; row++){
-					matrix[row] = new Dictionary<string, dynamic>();
-					//Need to enumerate values to create first row.
-					string[] rowData = Rows[row].Split(',');
-					try {
-						for (int col = 0; col < rowData.Length; col++){
-							//Need to record or access first row to match with values. 
-							matrix[row].Add(columnHeaders[col].ToString(), rowData[col]);
-						}
-					} catch {
-					}
-				}
-			} catch {
-			}
-			return matrix;
-		}
-
-		public string ToCsv(Dictionary<string, dynamic>[] matrix) {
-			string csv_out = "";
-			//Arrays seem to have a buffer row above and below the data.
-			int topRow = 1;
-			Dictionary<string, dynamic> headerRow = matrix[topRow];
-			//Write header row (th). Support for multi-line headers maybe someday but not today. 
-			if (headerRow != null) {
-				string[] columnHeaders = new string[headerRow.Keys.Count];
-				headerRow.Keys.CopyTo(columnHeaders, 0);
-				//var a = matrix[0].Keys;
-				foreach (string columnHeader in columnHeaders){
-						csv_out += columnHeader.ToString()+",";
-				}
-				csv_out = csv_out.TrimEnd(',');
-				// Write data rows (td).
-				for (int row = topRow; row < matrix.Length -1; row++){
-					csv_out += "\n";
-					foreach (string columnHeader in columnHeaders){
-						csv_out += matrix[row][columnHeader]+",";
-					}
-					csv_out = csv_out.TrimEnd(',');
-				}
-			}
-			csv_out += "\n";
-			return csv_out;
-		}
-		//File
-		//Non-locking alternative: System.IO.File.ReadAllBytes(Filename);
-		public string GetContent(string Filename, bool NoErrorMessage = false) {
-			string fiileString = null;
-			outBox.Text = "fiileString Start" +  Environment.NewLine + outBox.Text;
-			
-			FileStream logFileStream = new FileStream(Filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-			StreamReader logFileReader = new StreamReader(logFileStream);
-			while (!logFileReader.EndOfStream) {
-				outBox.Text = "fiileString While" +  Environment.NewLine + outBox.Text;
-				fiileString = logFileReader.ReadLine();
-				outBox.Text = fiileString.Length + Environment.NewLine + outBox.Text;
-			}
-			outBox.Text = "FileStream Success."+ fiileString.Length + Environment.NewLine + outBox.Text;
-			logFileReader.Close();
-			logFileStream.Close();
-			return fiileString;
-		}
-		public string OldGetContent(string Filename, bool NoErrorMessage = false) {
-			string string_out = "";
-				// Open the text file using a stream reader.
-				using (var sr = new StreamReader(Filename)) {
-					// Read the stream as a string, and write the string to the console.
-					string_out = sr.ReadToEnd();
-				}
-			return string_out;
-		}
-
-		public void OutFile(string path, object content, bool Append = false) {
-			//From SO: Use "typeof" when you want to get the type at compilation time. Use "GetType" when you want to get the type at execution time. "is" returns true if an instance is in the inheritance tree.
-			if (TestPath(path) == "None") {
-				File.Create(path).Close();
-			}
-			if (content.GetType() == typeof(string)) {
-				string out_content = (string)content;
-			//From SO: File.WriteAllLines takes a sequence of strings - you've only got a single string. If you only want your file to contain that single string, just use File.WriteAllText.
-				if (Append == true) {
-					File.AppendAllText(path, out_content, Encoding.ASCII);//string
-				} else {
-					File.WriteAllText(path, out_content, Encoding.ASCII);//string
-				}
-			} else {
-				IEnumerable<string> out_content = (IEnumerable<string>)content;
-				if (Append == true) {
-					File.AppendAllLines(path, out_content, Encoding.ASCII);//IEnumerable<string>'
-				} else {
-					File.WriteAllLines(path, out_content, Encoding.ASCII);//string[]
-				}				
-			}
-		}
-
-		public void RemoveItem(string Path,bool remake = false){
-			if (TestPath(Path) == "File") {
-				File.Delete(Path);
-				if (remake) {
-					File.Create(Path);
-				}
-			} else if (TestPath(Path) == "Directory") {
-				Directory.Delete(Path, true);
-				if (remake) {
-					Directory.CreateDirectory(Path);
-				}
-			}
-		}
-
-		public string TestPath(string path) {
-				string string_out = "";
-				if (path != null) {
-						path = path.Trim();
-					if (Directory.Exists(path)) {
-						string_out = "Directory";
-					} else if (File.Exists(path)) {
-						string_out = "File";
-					} else {// neither file nor directory exists. guess intention
-						string_out = "None";
-					}
-				} else {// neither file nor directory exists. guess intention
-					string_out = "Empty";
-				}
-				return string_out;
-			}
-		//Web
-		public string InvokeWebRequest(string Url, string Method = WebRequestMethods.Http.Get, string Body = "",bool Authorization = false,bool JSON = false){ 
-			string response_out = "";
-
-				// SSL stuff
-				//ServicePointManager.Expect100Continue = true;
-				ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
-
-				HttpWebRequest request = (HttpWebRequest)WebRequest.Create(Url);
-				
-				if (JSON == true) {
-					request.ContentType = "application/json";
-				}
-				if (Authorization == true) {
-					//request.Headers.Add("Authorization", "Bearer "+webHook);
-					//request.Headers.Add("X-GitHub-Api-build", "2022-11-28");
-					request.PreAuthenticate = true;
-				}
-
-				request.Method = Method;
-				request.ContentType = "application/json;charset=utf-8";
-				request.Accept = "application/vnd.github+json";
-				request.UserAgent = "WinGetApprovalPipeline";
-
-			 //Check Headers
-			 // for (int i=0; i < response.Headers.Count; ++i)  {
-				// outBox_msg.AppendText(Environment.NewLine + "Header Name : " + response.Headers.Keys[i] + "Header value : " + response.Headers[i]);
-			 // }
-
-			try {
-				if ((Body == "") || (Method ==WebRequestMethods.Http.Get)) {
-				} else {
-					var data = Encoding.Default.GetBytes(Body); // note: choose appropriate encoding
-					request.ContentLength = data.Length;
-					var newStream = request.GetRequestStream(); // get a ref to the request body so it can be modified
-					newStream.Write(data, 0, data.Length);
-					newStream.Close();
-				} 
-
-				} catch (Exception e) {
-					//MessageBox.Show("Wrong request!" + ex.Message, "Error");
-					response_out = "Request Error: " + e.Message;
-				}
-				
-				try {
-					HttpWebResponse response = (HttpWebResponse)request.GetResponse();
-					StreamReader sr = new StreamReader(response.GetResponseStream());
-					if (Method == "Head") {
-						string response_text = response.StatusCode.ToString();
-						response_out = response_text;
-
-					} else {
-						string response_text = sr.ReadToEnd();
-						response_out = response_text;
-					}
-					sr.Close();
-				} catch (Exception e) {
-					response_out = "Response Error: " + e.Message;
-				}
-		return response_out;
-		}// end InvokeWebRequest	
-		//Discord
-		public void SendDiscordMessage (string content) {
-			string payload = "{\"content\": \"" + content + "\"}";
-			InvokeWebRequest(webHook, WebRequestMethods.Http.Post, payload,false,true);
-		}
-
-
-
-
-
-//////////////////////////////////////////====================////////////////////////////////////////
-//////////////////////====================--------------------====================////////////////////
-//===================--------------------    Event Handlers   --------------------====================
-//////////////////////====================--------------------====================////////////////////
-//////////////////////////////////////////====================////////////////////////////////////////
-		//timer
-		private void timer_everysecond(object sender, EventArgs e) {
-			RunBot(0);
-		}
-		//ui
-        public void runButton_Click(object sender, EventArgs e) {
-			string action = "Run";
-			outBox.Text = action + Environment.NewLine + outBox.Text;
-			timer.Start();
-        }// end runButton_Click
-
-        public void stopButton_Click(object sender, EventArgs e) {
-			string action = "Stop";
-			outBox.Text = action + Environment.NewLine + outBox.Text;
-			timer.Stop();
-        }// end stopButton_Click
-
-        public void sendButton_Click(object sender, EventArgs e) {
-			//Season a = Season.Autumn;
-			//outBox.Text = a + Environment.NewLine + outBox.Text;
-			// string[] filelist = GetShopData(0);
-			// foreach (string file in filelist) {
-				// outBox.Text = file + Environment.NewLine + outBox.Text;
-			// }
-			// List<StockItem> ShopData = DailyData (0);
-			// ShopData = ShopData.Where(s => s.Event.Contains("Empty")).ToList();
-			// outBox.Text = "ShopData count: " + ShopData.Count + Environment.NewLine + outBox.Text;
-			// foreach (StockItem item in ShopData) {
-				// string out_msg = "Demo: Player `" + item.PlayerName + "` has purchased the last "+ item.StockQty + " " + item.ItemName+"!";
-				// outBox.Text = "[" + item.Timestamp + "] " +  out_msg + Environment.NewLine + outBox.Text;
-			// };
-			
-			outBox.Text = MoneyMade(0) + Environment.NewLine + outBox.Text;
-			
-        }// end stopButton_Click
-
-		public void OnResize(object sender, System.EventArgs e) {
-		}
-		//Menu
-		//File
-		public void Open_Log_Folder(object sender, EventArgs e) {
-			Process.Start(logFolder);
-		}// end Open_Log_Folder
-
-		public void Edit_Store_Name(object sender, EventArgs e) {
-			string input= StoreName;
-			DialogResult result = drawInputDialog(ref input);
-			switch (result) {
-				case DialogResult.OK:
-					StoreName = input;
-					appTitle = StoreName + " Shop Bot - Build ";
-					this.Text = appTitle + build;
-					break;
-			}
-		}// end Edit_Store_Name
-
-		public void Edit_Store_Coords(object sender, EventArgs e) {
-			string input="Edit_Store_Coords";
-			DialogResult result = drawInputDialog(ref input);
-			switch (result) {
-				case DialogResult.OK:
-					outBox.Text = input + Environment.NewLine + outBox.Text;
-					break;
-			}
-		}// end Edit_Store_Coords
-
-		public void Edit_Webhook(object sender, EventArgs e) {
-			string input="Edit_Webhook";
-			DialogResult result = drawInputDialog(ref input);
-			switch (result) {
-				case DialogResult.OK:
-					outBox.Text = input + Environment.NewLine + outBox.Text;
-					break;
-			}
-		}// end Edit_Webhook
-		
-		//Reports
-		public void Daily_Report(object sender, EventArgs e) {
-		}// end Daily_Report
-		
-		public void Weekly_Report(object sender, EventArgs e) {
-		}// end Weekly_Report
-		
-		public void Monthly_Report(object sender, EventArgs e) {
-		}// end Monthly_Report
-		
-		public void Other_Report(object sender, EventArgs e) {
-		}// end Other_Report
-		
-		//Help
-		public void About_Click (object sender, EventArgs e) {
-			string AboutText = "Alcove Shop Bot" + Environment.NewLine;
-			AboutText += "Generates out-of-stock alerts and financial reports from QuickShop" + Environment.NewLine;
-			AboutText += "Buy/Sell comments in Minecraft chat logs. Made for The Alcove player" + Environment.NewLine;
-			AboutText += "-run store on the ChillSMP Minecraft server. But this product isn't" + Environment.NewLine;
-			AboutText += "affiliated with any of those." + Environment.NewLine;
-			AboutText += "" + Environment.NewLine;
-			AboutText += "Version 1." + build + Environment.NewLine;
-			AboutText += "(C) 2025 Gilgamech Technologies" + Environment.NewLine;
-			AboutText += "" + Environment.NewLine;
-			AboutText += "Report bugs & request features:" + Environment.NewLine;
-			AboutText += "ShopBot@Gilgamech.com" + Environment.NewLine;
-			MessageBox.Show(AboutText);
-		} // end Link_Click
     }// end AlcoveShopBot
 	
 	public class StockItem  {
