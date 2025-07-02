@@ -32,7 +32,7 @@ using System.Web.Script.Serialization;
 namespace ShopBotNamespace {
     public class AlcoveShopBot : Form {
 //{ Ints
-        public int build = 1139;//Get-RebuildCsharpApp AlcoveShopBot
+        public int build = 1453;//Get-RebuildCsharpApp AlcoveShopBot
 		public string appName = "AlcoveShopBot";
 		public string StoreName = "Not Loaded";
 		public string StoreCoords = "Not Loaded";
@@ -59,7 +59,7 @@ namespace ShopBotNamespace {
 		JavaScriptSerializer serializer = new JavaScriptSerializer();
 		System.Windows.Forms.Timer timer = new System.Windows.Forms.Timer();
 
-        public Button runButton, stopButton,sendButton;
+        public Button runButton, stopButton;
 		public TextBox moneyMadeBox = new TextBox();
 		public Label moneyMadeLabel = new Label();
 		public RichTextBox outBox = new RichTextBox();
@@ -81,7 +81,8 @@ namespace ShopBotNamespace {
 		public Panel pagePanel;
 		public int displayLine = 0;
 		public int sideBufferWidth = 0;
-			//outBox.Font = new Font("Calibri", 14);
+		public string Mode = "Stop";
+		//outBox.Font = new Font("Calibri", 14);
 		
 		//Grid
 		public static int gridItemWidth = 60;
@@ -111,7 +112,7 @@ namespace ShopBotNamespace {
  		public static int col9 = gridItemWidth*9;
  		public static int col10 = gridItemWidth*10;
 
-public enum Values
+public enum EventNames
 {
     Empty,
     Full,
@@ -133,14 +134,6 @@ public enum Values
 		//public string DataFile = "C:\\repos\\AlcoveShopBot\\AlcoveShopBot.csv";
 		//public string OwnerList = "C:\\repos\\AlcoveShopBot\\ChillPWOwnerList.csv";
 
-/*
- 		public void Values = @{}
- 		public void Values.Empty = "Empty"
- 		public void Values.Full = "Full"
- 		public void Values.Sell = "Sell"
- 		public void Values.Buy = "Buy"
- 		public void Values.Neg = "-"
-*/
 
 
 
@@ -183,11 +176,10 @@ public enum Values
 			outBox.ReadOnly = true;
 			outBox.DetectUrls = true;
 			// outBox.ScrollBars = System.Windows.Forms.RichTextBoxScrollBars.None;
-			RunBot(0);
+			RefreshStatus();
 
 			timer.Interval = (10 * 1000);
 			timer.Tick += new EventHandler(timer_everysecond);
-			timer.Start();
         } // end AlcoveShopBot
 
 		public void buildMenuBar (){
@@ -228,14 +220,15 @@ public enum Values
 		}
 		//ui
         public void runButton_Click(object sender, EventArgs e) {
-			string action = "Run";
-			outBox.Text = action + Environment.NewLine + outBox.Text;
+			Mode = "Run";
+			RefreshStatus();
+			RunBot(0);
 			timer.Start();
         }// end runButton_Click
 
         public void stopButton_Click(object sender, EventArgs e) {
-			string action = "Stop";
-			outBox.Text = action + Environment.NewLine + outBox.Text;
+			Mode = "Stop";
+			RefreshStatus();
 			timer.Stop();
         }// end stopButton_Click
 
@@ -278,11 +271,15 @@ public enum Values
 		//Reports
 		public void Daily_Report(object sender, EventArgs e) {
 			var now = DateTime.Now;
-			string day = now.AddDays(-1).ToString("dd");
+			string day = "3";
+			//if day is greater than now.Day, then it's for last month. If day is less than now.Day, then it was earlier this month.
+			int dayNum = 0;
 			DialogResult result = drawInputDialog(ref day, "Day of month to report.");
 			switch (result) {
 				case DialogResult.OK:
-					outBox.Text = BuildDailyReport(Convert.ToInt32(day)) + Environment.NewLine + outBox.Text;
+					int.TryParse(day, out dayNum);
+					string Date = new DateTime(now.AddDays(-dayNum).Year, now.AddDays(-dayNum).Month, now.AddDays(-dayNum).Day).ToString("yyyy-MM-dd");
+					outBox.Text = BuildDailyReport(0, Date) + Environment.NewLine + outBox.Text;
 					break;
 			}
 		}// end Daily_Report
@@ -328,19 +325,13 @@ public enum Values
 			List<StockItem> ShopData = GetShopData("");
 			ShopData = ShopData.Where(s => s.Event.Contains("Empty")).ToList();
 			ShopData =  ShopData.Where(s => !OldData.Any(o => o.Timestamp.Contains(s.Timestamp))).ToList();
-			//foreach(StockItem item in OldData) ShopData.Remove(item);
-			//ShopData = ShopData.Except(OldData).ToList();
 			if (ShopData.Any() == true) {
-			// outBox.Text = "ShopData Before:" + serializer.Serialize(ShopData) + Environment.NewLine + outBox.Text;
-			// outBox.Text = "OldData Before:" + serializer.Serialize(OldData) + Environment.NewLine + outBox.Text;
 				foreach (StockItem item in ShopData) {
 					string out_msg = "Empty shop: Player `" + item.PlayerName + "` has purchased the last "+ item.StockQty + " " + item.ItemName+"!";
 					outBox.Text = "[" + item.Timestamp + "] " +  out_msg + Environment.NewLine + outBox.Text;
 					SendDiscordMessage(out_msg);
 				};
 			OldData.AddRange(ShopData);
-			// outBox.Text = "ShopData After:" + serializer.Serialize(ShopData) + Environment.NewLine + outBox.Text;
-			// outBox.Text = "OldData After:" + serializer.Serialize(OldData) + Environment.NewLine + outBox.Text;
 			}
 		}
 
@@ -359,86 +350,79 @@ public enum Values
 					StreamReader logFileReader = new StreamReader(logFileStream);
 					while (!logFileReader.EndOfStream) {
 						fiileString = logFileReader.ReadLine();
-						//outBox.Text = fiileString + Environment.NewLine + outBox.Text;
 						string[] fileContents = fiileString.Replace("] [Render thread/INFO]: [System] [CHAT] ",",").Split('\n');
 						Data.AddRange(fileContents.Where(d => d.Contains("SHOPS ▶ ")).ToList());
 					}
-				//outBox.Text = "FileStream Success."+ Logfile + " count: " + Data.Count + Environment.NewLine + outBox.Text;
 					logFileReader.Close();
 					logFileStream.Close();
 
 			} catch (Exception FileStreamError) {
-				outBox.Text = "FileStreamError: " + FileStreamError.Message + Environment.NewLine + outBox.Text;
+				outBox.Text = "(GetShopData) FileStreamError: " + FileStreamError.Message + Environment.NewLine + outBox.Text;
 				try {
 			string[] fileContents = GetContent(Logfile, true).Replace("] [Render thread/INFO]: [System] [CHAT] ",",").Split('\n');
 			Data.AddRange(fileContents.Where(d => d.Contains("SHOPS ▶ ")).ToList());
-				//outBox.Text = "GetContent Success."+ Logfile + " count: " + Data.Count + Environment.NewLine + outBox.Text;
 				} catch (Exception GetContentError) {
-					outBox.Text = "GetContentError: " + GetContentError.Message + Environment.NewLine + outBox.Text;
+					outBox.Text = "(GetShopData) GetContentError: " + GetContentError.Message + Environment.NewLine + outBox.Text;
 					fiileString = FileStreamError.Message + "; " + GetContentError.Message;
 				}
 			}
 			Data = Data.Where(d => !d.Contains("Enter all in chat")).ToList();
 			Data = Data.Where(d => !d.Contains("out of space")).ToList();
 			Data = Data.Where(d => !d.Contains("how many you wish")).ToList();
+			Data = Data.Where(d => !d.Contains("Shop purchase cancelled")).ToList();
 
 
 			//Data = Data.Where(x => x.notmatch("");
 			foreach (string Item in Data) {
 				n++;
 				stockitem = new StockItem();
+				//outBox.Text = "(GetShopData) Item " + serializer.Serialize(Item) + Environment.NewLine + outBox.Text;
 				//Use all 3 coords because some places have 2 buy shops stacked at the same X and Z. 
 				if (Item.Contains("has run out of")){
 						string[] SplitItem = Item.Replace("[","").Replace("] Your shop at",",").Replace(" has run out of",",").Replace("!","").Replace(", ",",").Split(',');
 						//06:07:40 ,15226, 63, 20487, Cocoa Beans
+						stockitem.Event = "Empty";
 						stockitem.Timestamp = SplitItem[0];
 						stockitem.XLoc = Convert.ToInt32(SplitItem[1].Split(' ').Last());
 						stockitem.YLoc = Convert.ToInt32(SplitItem[2]);
 						stockitem.ZLoc = Convert.ToInt32(SplitItem[3]);
 						stockitem.ItemName = SplitItem[4];
-						stockitem.Event = "Empty";
-						// outBox.Text = stockitem.Timestamp + " - " + stockitem.Event + " - " + stockitem.ItemName + " - " + Environment.NewLine + outBox.Text;
-						//outBox.Text = (Data[Data.IndexOf(Item)-1].Split(' '))[4] + Environment.NewLine + outBox.Text;
 						stockitem.StockQty = Convert.ToInt32((Data[Data.IndexOf(Item)-1].Split(' '))[4]);
 						stockitem.PlayerName = (Data[Data.IndexOf(Item)-1].Split(' '))[2];
 		            } else if (Item.Contains("is now full")){
 						string[] SplitItem = Item.Replace("[","").Replace("] Your shop at",",").Replace(" is now full.",", ").Replace("!","").Replace(", ",",").Split(',');
 						//05:33:18, 15274, 66, 20463,
+						stockitem.Event = "Full";
 						stockitem.Timestamp = SplitItem[0];
 						stockitem.XLoc = Convert.ToInt32(SplitItem[1].Split(' ').Last());
 						stockitem.YLoc = Convert.ToInt32(SplitItem[2]);
 						stockitem.ZLoc = Convert.ToInt32(SplitItem[3]);
-						//stockitem.ItemName = SplitItem[4];
-						stockitem.Event = "Full";
-						//stockitem.StockQty = Convert.ToInt32((Data[Data.IndexOf(Item)-1].Split(' '))[3]);
-						//stockitem.PlayerName = (Data[Data.IndexOf(Item)-1].Split(' '))[1];
 		            } else if (Item.Contains("to your shop")){
 						string[] SplitItem = Item.Replace("[","").Replace("]",",").Replace(" sold ",", ").Replace(" to your shop {3}.",", ").Replace("!","").Split(',');
 						 //05:40:12, kota490, 1728 Sea Lantern,
-						stockitem.Timestamp = SplitItem[0];
-						stockitem.PlayerName = SplitItem[1];
-						//stockitem.XLoc = SplitItem[1];
-						//stockitem.YLoc = SplitItem[2];
-						//stockitem.ZLoc = SplitItem[3];
-						// string[] SplitItemArray = SplitItem[2].Split(' ').Skip(1).Take(9).ToArray();
-						// stockitem.ItemName = String.Join(" ",SplitItemArray);
 						stockitem.Event = "Sell";
-						//stockitem.StockQty = Convert.ToInt32((Data[Data.IndexOf(Item)-1].Split(' '))[3]);
-						//stockitem.PlayerName = (Data[Data.IndexOf(Item)-1].Split(' '))[1];
+						stockitem.Timestamp = SplitItem[0];
+						stockitem.PlayerName = SplitItem[1].Split(' ').Last();
+						int.TryParse(SplitItem[2].Split(' ')[1], out stockitem.StockQty);
+						stockitem.ItemName = String.Join(" ", SplitItem[2].Split(' ').Skip(2).Take(9));
+						// outBox.Text = stockitem.Timestamp + " - " + stockitem.Event + " - " + stockitem.ItemName + " - " + Environment.NewLine + outBox.Text;
 		            } else if (Item.Contains("from your shop")){
 						string[] SplitItem = Item.Replace("[","").Replace("]",",").Replace(" purchased ",", ").Replace(" from your shop and you earned ",", ").Replace("(","").Split(',');
+						// outBox.Text = "(GetShopData) SplitItem " + serializer.Serialize(SplitItem) + Environment.NewLine + outBox.Text;
+						// outBox.Text = "(GetShopData) Item " + serializer.Serialize(Item) + Environment.NewLine + outBox.Text;
 						//05:47:12 _Blackjack29313, 2 Grindstone, 9.50 0.50 in taxes).
-						stockitem.Timestamp = SplitItem[0];
-						stockitem.PlayerName = SplitItem[1];
-						//stockitem.XLoc = SplitItem[1];
-						//stockitem.YLoc = SplitItem[2];
-						//stockitem.ZLoc = SplitItem[3];
-						// string[] SplitItemArray = SplitItem[2].Split(' ').Skip(1).Take(9).ToArray();
-						// stockitem.ItemName = String.Join(" ",SplitItemArray);
 						stockitem.Event = "Buy";
-						//stockitem.StockQty = Convert.ToInt32((Data[Data.IndexOf(Item)-1].Split(' '))[3]);
-						//stockitem.PlayerName = (Data[Data.IndexOf(Item)-1].Split(' '))[1];
+						stockitem.Timestamp = SplitItem[0];
+						stockitem.PlayerName = SplitItem[1].Split(' ').Last();
+						int.TryParse(SplitItem[2].Split(' ')[1], out stockitem.StockQty);
+						stockitem.ItemName = String.Join(" ", SplitItem[2].Split(' ').Skip(2).Take(9));
+						string Earnings = SplitItem[3];
+						Earnings = Earnings.Replace("$","").Split(' ')[1];
+						// outBox.Text = "(GetShopData) Earnings: " + Earnings+ Environment.NewLine + outBox.Text;
+						stockitem.Earnings = decimal.Parse(Earnings);
+						// outBox.Text = "(GetShopData) stockitem: " + serializer.Serialize(stockitem) + Environment.NewLine + outBox.Text;
 					}
+				//outBox.Text = "(GetShopData) stockitem " + serializer.Serialize(stockitem) + Environment.NewLine + outBox.Text;
 				out_var.Add(stockitem);
 			}//end foreach
 		return out_var;
@@ -446,98 +430,70 @@ public enum Values
 		
 		//Reports
 		public string[] DecompressDailyFiles (int day = 0, string Date = "") {
-			  var now = DateTime.Now;
+			var now = DateTime.Now;
 			if (day == 0) {
-				day = Convert.ToInt32(now.AddDays(-1).ToString("dd"));
+				int.TryParse(now.AddDays(-1).ToString("dd"), out day);
 			}
 			if (Date == "") {
 				Date = new DateTime(now.Year, now.Month, day).ToString("yyyy-MM-dd");
 			}
-			string[] UnzipFiles = Directory.GetFileSystemEntries(logFolder, Date + "*.log.gz", SearchOption.AllDirectories);
+			//outBox.Text = "(DecompressDailyFiles) Date: " + Date + Environment.NewLine + outBox.Text;
+			string[] UnzipFiles = Directory.GetFiles(logFolder, Date + "*.log.gz", SearchOption.TopDirectoryOnly);
 			foreach (string Filename in UnzipFiles) {
 				try {
 					DeGZip(Filename);
-				} catch {}
+				} catch (Exception e) {
+					outBox.Text = "(DecompressDailyFiles) DeGZip: " + e.Message + Environment.NewLine + outBox.Text;
+				}
 			}
-			string[] inputfiles = Directory.GetFileSystemEntries(logFolder, Date + "*.log", SearchOption.AllDirectories);
-			return inputfiles;
+				try {
+					string[] inputfiles = Directory.GetFiles(logFolder, Date + "*.log", SearchOption.TopDirectoryOnly);
+					//outBox.Text = "(DecompressDailyFiles) inputfiles: " + serializer.Serialize(inputfiles) + Environment.NewLine + outBox.Text;
+					return inputfiles;
+				} catch (Exception e) {
+					outBox.Text = "(DecompressDailyFiles) inputfiles: " + e.Message + Environment.NewLine + outBox.Text;
+					return null;
+				}
 		}
 		
-		public List<StockItem> DailyData (int day = 0) {
+		public List<StockItem> DailyData (int day = 0, string Date = "") {
 			  var now = DateTime.Now;
 			if (day == 0) {
-				day = Convert.ToInt32(now.AddDays(-1).ToString("dd"));
+				int.TryParse(now.AddDays(-1).ToString("dd"), out day);
+			}
+			if (Date == "") {
+				Date = new DateTime(now.Year, now.Month, day).ToString("yyyy-MM-dd");
 			}
 			List<StockItem> Data = new List<StockItem>();
-			string[] inputfiles = DecompressDailyFiles(day);
+			// outBox.Text = "(DailyData) day: " + day + Environment.NewLine + outBox.Text;
+			// outBox.Text = "(DailyData) Data: " + serializer.Serialize(Data) + Environment.NewLine + outBox.Text;
+			string[] inputfiles = DecompressDailyFiles(day,Date);
+			//outBox.Text = "(DailyData) inputfiles: " + serializer.Serialize(inputfiles) + Environment.NewLine + outBox.Text;
 			GetShopData(LatestLog); //Reading the log seems to nudge the filesystem into writing the gzip data.
 			foreach (string Filename in inputfiles) {
-			//outBox.Text = "Filename: " + Filename + Environment.NewLine + outBox.Text;
-			var data_inter = GetShopData(Filename);
-			//outBox.Text = "Inter count: " + data_inter.Count + Environment.NewLine + outBox.Text;
-			Data.AddRange(data_inter);
-			//outBox.Text = "Data count: " + Data.Count + Environment.NewLine + outBox.Text;
+				// outBox.Text = "(DailyData) Filename: " + Filename + Environment.NewLine + outBox.Text;
+				var data_inter = GetShopData(Filename);
+				//outBox.Text = "(DailyData) data_inter: " + serializer.Serialize(data_inter) + Environment.NewLine + outBox.Text;
+				// outBox.Text = "(DailyData) Inter count: " + data_inter.Count + Environment.NewLine + outBox.Text;
+				Data.AddRange(data_inter);
+				
+				//outBox.Text = "Data count: " + Data.Count + Environment.NewLine + outBox.Text;
 			}
 			return Data;
 		}
 
 		public string MoneyMade (int day = 0, string Date = "", bool Format = false, bool Today = false) {
 			string sum_string = null;
-			var now = DateTime.Now;
-			int Sum = 0;
-			string Data = "\n";
+			decimal Sum = 0;
+			List<StockItem> Data = DailyData(day, Date);
 			if (Today) {
-				day = now.Day;
-
-
-			try {
-					FileStream logFileStream = new FileStream(LatestLog, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-					StreamReader logFileReader = new StreamReader(logFileStream);
-					while (!logFileReader.EndOfStream) {
-						Data = logFileReader.ReadLine();
-					}
-				//outBox.Text = "FileStream Success."+ Logfile + " count: " + Data.Count + Environment.NewLine + outBox.Text;
-					logFileReader.Close();
-					logFileStream.Close();
-
-			} catch (Exception FileStreamError) {
-				outBox.Text = "FileStreamError: " + FileStreamError.Message + Environment.NewLine + outBox.Text;
+				Data = GetShopData(LatestLog);
 			}
-			
-			} else {
-				if (day == 0) {
-					day = Convert.ToInt32(now.AddDays(-1).ToString("dd"));
-				} 
-				string[] inputfiles = DecompressDailyFiles(day);
-				if (Date == "") {
-					Date = new DateTime(now.Year, now.Month, day).ToString("yyyy-MM-dd");
-					inputfiles = DecompressDailyFiles(0, Date);
-				}
-				GetShopData(LatestLog); //Reading the log seems to nudge the filesystem into writing the gzip data.
-				
-				foreach (string Filename in inputfiles) {
-			try {
-					FileStream logFileStream = new FileStream(Filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-					StreamReader logFileReader = new StreamReader(logFileStream);
-					while (!logFileReader.EndOfStream) {
-						Data = logFileReader.ReadLine();
-					}
-				//outBox.Text = "FileStream Success."+ Logfile + " count: " + Data.Count + Environment.NewLine + outBox.Text;
-					logFileReader.Close();
-					logFileStream.Close();
-
-			} catch (Exception FileStreamError) {
-				outBox.Text = "FileStreamError: " + FileStreamError.Message + Environment.NewLine + outBox.Text;
-			}
-				}
-			}
-			string[] split_data = Data.Split('\n');
-			split_data = split_data.Where(s => s.Contains("and you earned")).ToArray();
-			foreach (string Datum in split_data) {
-				string split = Datum.Split('$')[1].Replace(" (","");
-				int number;
-				int.TryParse(split, out number);
-				Sum += number;
+			// outBox.Text = "(MoneyMade) day: " + day + Environment.NewLine + outBox.Text;
+			// outBox.Text = "(MoneyMade) Data: " + serializer.Serialize(Data) + Environment.NewLine + outBox.Text;
+			Data = Data.Where(s => s.Event.Contains(EventNames.Buy.ToString())).ToList();
+			foreach (StockItem Datum in Data) {
+				Sum += Datum.Earnings;
 			}
 			sum_string = Sum.ToString("C2");
 			if (Format) {
@@ -546,49 +502,46 @@ public enum Values
 			return sum_string;
 		}
 
-		public string GetDailySales (int day = 0, string Date = "", bool Weekly = false, List<StockItem> Data = null, string LogFile = "") {
+		public string GetDailySales (string Date = "", bool Weekly = false, List<StockItem> Data = null) {
 			string string_out = "";
 			string Turnover = "";
 			string string_Sold = "";
 			string string_Purchased = "";
 			var now = DateTime.Now;
-
-			if (LogFile == "") {
-				LogFile = LatestLog;
-			}
-			if (day == 0) {
-				day = Convert.ToInt32(now.AddDays(-1).ToString("dd"));
-			}
+			int day = Convert.ToInt32(now.AddDays(-1).ToString("dd"));
 			if (Date == "") {
 				Date = new DateTime(now.Year, now.Month, day).ToString("yyyy-MM-dd");
 			}
+			string LogFile = logFolder+"\\" + Date + ".log";
 
 			int Sold = 0;
 			int Purchased = 0;
 			if (Data == null) {
 				Data = GetShopData (LogFile).Where(d => d.Event != null).ToList();
 			}
-			foreach (StockItem Datum in Data.Where(d => d.Event == Values.Buy.ToString()).ToList()) {
-				int number;
+			foreach (StockItem Datum in Data.Where(d => d.Event == EventNames.Buy.ToString()).ToList()) {
+				int number = 0;
 				int.TryParse(Datum.StockQty.ToString().Replace("-",""), out number);
+				//outBox.Text = "(GetDailySales) Buy Datum " + serializer.Serialize(Datum) + Environment.NewLine + outBox.Text;
 				Sold += number;
 			}
-			foreach (StockItem Datum in Data.Where(d => d.Event == Values.Sell.ToString()).ToList()) {
-				int number;
+			foreach (StockItem Datum in Data.Where(d => d.Event == EventNames.Sell.ToString()).ToList()) {
+				int number = 0;
 				int.TryParse(Datum.StockQty.ToString().Replace("-",""), out number);
+				//outBox.Text = "(GetDailySales) Sell Datum " + serializer.Serialize(Datum) + Environment.NewLine + outBox.Text;
 				Purchased += number;
 			}
 			if (Purchased > Sold) {
-				Turnover = (Purchased - Sold) + "more purchased than sold.";
+				Turnover = (Purchased - Sold) + " more purchased than sold.";
 			} else if (Purchased < Sold) {
-				Turnover = (Sold - Purchased) + "more sold than purchased.";
+				Turnover = (Sold - Purchased) + " more sold than purchased.";
 			} else {
 				Turnover = "Exact same amount purchased as sold. (This is rare, please double-check.)";
 			}
 			string_Sold = Sold.ToString("C2");
 			string_Purchased = Purchased.ToString("C2");
 			
-			int OOS = Data.Where(d => d.Event == Values.Empty.ToString()).ToList().Count();
+			int OOS = Data.Where(d => d.Event == EventNames.Empty.ToString()).ToList().Count();
 			
 			if (Weekly) {
 				if (Turnover == "Exact same amount purchased as sold. (This is rare, please double-check.)") {
@@ -597,7 +550,7 @@ public enum Values
 				string spacer = " | ";
 				string_out = Date + spacer + Sold+ spacer +  Purchased+ spacer + Turnover + spacer + OOS;
 			} else {
-				string_out = "Daily sales report for" + Date + ":\n- Sold: " + Sold + ":\n- Purchased: " + Purchased + ":\n- Turnover: " + Turnover + "\n- Out of stocks: " + OOS;
+				string_out = "Daily sales report for " + Date + ":\n- Sold: " + Sold + ":\n- Purchased: " + Purchased + ":\n- Turnover: " + Turnover + "\n- Out of stocks: " + OOS;
 			}
 		return string_out;
 		}
@@ -610,25 +563,38 @@ public enum Values
 			if (Date == "") {
 				Date = new DateTime(now.Year, now.Month, day).ToString("yyyy-MM-dd");
 			}
-			List<StockItem> ShopData = DailyData (day);
-			return GetDailySales(0, Date, Weekly, ShopData);
+			List<StockItem> ShopData = DailyData (day, Date);
+			//outBox.Text = "(BuildDailyReport) "+serializer.Serialize(ShopData) + Environment.NewLine + outBox.Text;
+			return GetDailySales(Date, Weekly, ShopData);
 		}
 
 		public string BuildBiweeklyReport (int days = 14) {
 			var now = DateTime.Now;
 			string string_out = "Date | Sold | Purchased | Turnover | OOS | Revenue\n";
 				
-			for (int day = (days +1); day>0; day--) {
-				string Date = new DateTime(now.Year, now.Month, day).ToString("yyyy-MM-dd");
+			for (int day = 1; day<(days +1); day++) {
+				string Date = new DateTime(now.AddDays(-day).Year, now.AddDays(-day).Month, now.AddDays(-day).Day).ToString("yyyy-MM-dd");
 				string Report = BuildDailyReport (0, Date, true);
-				MoneyMade(0);
-				string moneyMade = "MoneyMade";
+				string moneyMade = MoneyMade(0,Date,false);
 				string_out +=  Report + " | " + moneyMade + "\n";
 			}
 			return string_out;
 		}
 
+ 		public void RefreshStatus() {
+			Color color_DefaultBack = Color.FromArgb(240,240,240);
+			Color color_DefaultText = Color.FromArgb(0,0,0);
+			Color color_InputBack = Color.FromArgb(255,255,255);
+			Color color_ActiveBack = Color.FromArgb(200,240,240);
 
+			if (Mode == "Run") {
+				runButton.BackColor = color_ActiveBack;
+				stopButton.BackColor = color_DefaultBack;
+			} else if (Mode == "Stop") {
+				runButton.BackColor = color_DefaultBack;
+				stopButton.BackColor = color_ActiveBack;
+			} 
+		} 
 
 
 
@@ -644,7 +610,7 @@ public enum Values
 		Get-Process = public Process[] processes = Process.GetProcesses(); or var processes = Process.GetProcessesByName("Test");
 		New-Item = Directory.CreateDirectory(Path) or File.Create(Path);
 		Remove-Item = Directory.Delete(Path) or File.Delete(Path);
-		Get-ChildItem = string[] entries = Directory.GetFileSystemEntries(path, "*", SearchOption.AllDirectories);
+		Get-ChildItem = string[] entries = Directory.GetFiles(path, "*", SearchOption.TopDirectoryOnly);
 		Start-Process = System.Diagnostics.Process.Start("PathOrUrl");
 		Stop-Process = StopProcess("ProcessName");
 		Start-Sleep = Thread.Sleep(GitHubRateLimitDelay);
@@ -743,14 +709,14 @@ public enum Values
 		public string GetContent(string Filename, bool NoErrorMessage = false) {
 			string fiileString = null;
 			try {
-			outBox.Text = "fiileString Start" +  Environment.NewLine + outBox.Text;
+			//outBox.Text = "fiileString Start" +  Environment.NewLine + outBox.Text;
 			
 			FileStream logFileStream = new FileStream(Filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
 			StreamReader logFileReader = new StreamReader(logFileStream);
 			while (!logFileReader.EndOfStream) {
-				outBox.Text = "fiileString While" +  Environment.NewLine + outBox.Text;
+				//outBox.Text = "fiileString While" +  Environment.NewLine + outBox.Text;
 				fiileString = logFileReader.ReadLine();
-				outBox.Text = fiileString.Length + Environment.NewLine + outBox.Text;
+				//outBox.Text = fiileString.Length + Environment.NewLine + outBox.Text;
 			}
 			//outBox.Text = "FileStream Success."+ fiileString.Length + Environment.NewLine + outBox.Text;
 			logFileReader.Close();
@@ -1162,6 +1128,7 @@ public enum Values
 	  public string Event;
 	  public string Timestamp;
 	  public string PlayerName;
+	  public decimal Earnings;
 	}
 }// end ShopBotNamespace
 
