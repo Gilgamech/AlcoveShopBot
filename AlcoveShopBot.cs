@@ -32,7 +32,7 @@ using System.Web.Script.Serialization;
 namespace ShopBotNamespace {
     public class AlcoveShopBot : Form {
 //{ Ints
-        public int build = 1453;//Get-RebuildCsharpApp AlcoveShopBot
+        public int build = 1465;//Get-RebuildCsharpApp AlcoveShopBot
 		public string appName = "AlcoveShopBot";
 		public string StoreName = "Not Loaded";
 		public string StoreCoords = "Not Loaded";
@@ -198,6 +198,7 @@ public enum EventNames
 			item = new MenuItem("Reports");
 			this.Menu.MenuItems.Add(item);
 				item.MenuItems.Add("Daily", new EventHandler(Daily_Report));
+				item.MenuItems.Add("Send Daily to Webhook", new EventHandler(Send_Daily_Report));
 				item.MenuItems.Add("Biweekly", new EventHandler(Biweekly_Report));
 			
 			item = new MenuItem("Help");
@@ -271,15 +272,47 @@ public enum EventNames
 		//Reports
 		public void Daily_Report(object sender, EventArgs e) {
 			var now = DateTime.Now;
+			string reportDay_string = now.AddDays(-1).Day.ToString();
+			int reportDay = 0;
+			int daysAgo = 0;
+			DialogResult result = drawInputDialog(ref reportDay_string, "Day of month to report.");
+			switch (result) {
+				case DialogResult.OK:
+					int.TryParse(reportDay_string, out reportDay);
+					//Numbers representing time increase with time. 
+					if (now.Day > reportDay) {
+						//If now.Day is larger than (after) reportDay, then the report is for earlier this month. 
+						daysAgo = now.Day - reportDay;
+					} else if (reportDay > now.Day) {
+						//If reportDay is larger than (after) now.Day, then it's for last month.
+						int DaysInLastMonth = DateTime.DaysInMonth(now.AddDays(-daysAgo).Year, now.AddDays(-daysAgo).AddMonths(-1).Month);
+						daysAgo = DaysInLastMonth - (reportDay - now.Day);
+						outBox.Text = "DaysInLastMonth: " + DaysInLastMonth + Environment.NewLine + outBox.Text;
+					} else {
+						daysAgo = 0;
+					}  
+					outBox.Text = "daysAgo: " + daysAgo + Environment.NewLine + outBox.Text;
+					
+					
+					
+					string Date = new DateTime(now.AddDays(-daysAgo).Year, now.AddDays(-daysAgo).Month, now.AddDays(-daysAgo).Day).ToString("yyyy-MM-dd");
+					outBox.Text = BuildDailyReport(0, Date) + Environment.NewLine + outBox.Text;
+					break;
+			}
+		}// end Daily_Report
+		
+		public void Send_Daily_Report(object sender, EventArgs e) {
+			var now = DateTime.Now;
 			string day = "3";
 			//if day is greater than now.Day, then it's for last month. If day is less than now.Day, then it was earlier this month.
 			int dayNum = 0;
-			DialogResult result = drawInputDialog(ref day, "Day of month to report.");
+			DialogResult result = drawInputDialog(ref day, "Day of month to send.");
 			switch (result) {
 				case DialogResult.OK:
 					int.TryParse(day, out dayNum);
 					string Date = new DateTime(now.AddDays(-dayNum).Year, now.AddDays(-dayNum).Month, now.AddDays(-dayNum).Day).ToString("yyyy-MM-dd");
-					outBox.Text = BuildDailyReport(0, Date) + Environment.NewLine + outBox.Text;
+					SendMessageToWebhook (BuildDailyReport(0, Date)) ;
+					outBox.Text = "Report sent to webhook" + Environment.NewLine + outBox.Text;
 					break;
 			}
 		}// end Daily_Report
@@ -306,7 +339,7 @@ public enum EventNames
 			AboutText += "(C) 2025 Gilgamech Technologies" + Environment.NewLine;
 			AboutText += "" + Environment.NewLine;
 			AboutText += "Report bugs & request features:" + Environment.NewLine;
-			AboutText += "ShopBot@Gilgamech.com" + Environment.NewLine;
+			AboutText += "https://github.com/Gilgamech/AlcoveShopBot/issues" + Environment.NewLine;
 			MessageBox.Show(AboutText);
 		} // end Link_Click
 
@@ -329,7 +362,7 @@ public enum EventNames
 				foreach (StockItem item in ShopData) {
 					string out_msg = "Empty shop: Player `" + item.PlayerName + "` has purchased the last "+ item.StockQty + " " + item.ItemName+"!";
 					outBox.Text = "[" + item.Timestamp + "] " +  out_msg + Environment.NewLine + outBox.Text;
-					SendDiscordMessage(out_msg);
+					SendMessageToWebhook(out_msg);
 				};
 			OldData.AddRange(ShopData);
 			}
@@ -357,12 +390,12 @@ public enum EventNames
 					logFileStream.Close();
 
 			} catch (Exception FileStreamError) {
-				outBox.Text = "(GetShopData) FileStreamError: " + FileStreamError.Message + Environment.NewLine + outBox.Text;
+				//outBox.Text = "(GetShopData) FileStreamError: " + FileStreamError.Message + Environment.NewLine + outBox.Text;
 				try {
 			string[] fileContents = GetContent(Logfile, true).Replace("] [Render thread/INFO]: [System] [CHAT] ",",").Split('\n');
 			Data.AddRange(fileContents.Where(d => d.Contains("SHOPS ▶ ")).ToList());
 				} catch (Exception GetContentError) {
-					outBox.Text = "(GetShopData) GetContentError: " + GetContentError.Message + Environment.NewLine + outBox.Text;
+					//outBox.Text = "(GetShopData) GetContentError: " + GetContentError.Message + Environment.NewLine + outBox.Text;
 					fiileString = FileStreamError.Message + "; " + GetContentError.Message;
 				}
 			}
@@ -443,7 +476,7 @@ public enum EventNames
 				try {
 					DeGZip(Filename);
 				} catch (Exception e) {
-					outBox.Text = "(DecompressDailyFiles) DeGZip: " + e.Message + Environment.NewLine + outBox.Text;
+					//outBox.Text = "(DecompressDailyFiles) DeGZip: " + e.Message + Environment.NewLine + outBox.Text;
 				}
 			}
 				try {
@@ -451,7 +484,7 @@ public enum EventNames
 					//outBox.Text = "(DecompressDailyFiles) inputfiles: " + serializer.Serialize(inputfiles) + Environment.NewLine + outBox.Text;
 					return inputfiles;
 				} catch (Exception e) {
-					outBox.Text = "(DecompressDailyFiles) inputfiles: " + e.Message + Environment.NewLine + outBox.Text;
+					//outBox.Text = "(DecompressDailyFiles) inputfiles: " + e.Message + Environment.NewLine + outBox.Text;
 					return null;
 				}
 		}
@@ -465,19 +498,11 @@ public enum EventNames
 				Date = new DateTime(now.Year, now.Month, day).ToString("yyyy-MM-dd");
 			}
 			List<StockItem> Data = new List<StockItem>();
-			// outBox.Text = "(DailyData) day: " + day + Environment.NewLine + outBox.Text;
-			// outBox.Text = "(DailyData) Data: " + serializer.Serialize(Data) + Environment.NewLine + outBox.Text;
 			string[] inputfiles = DecompressDailyFiles(day,Date);
-			//outBox.Text = "(DailyData) inputfiles: " + serializer.Serialize(inputfiles) + Environment.NewLine + outBox.Text;
 			GetShopData(LatestLog); //Reading the log seems to nudge the filesystem into writing the gzip data.
 			foreach (string Filename in inputfiles) {
-				// outBox.Text = "(DailyData) Filename: " + Filename + Environment.NewLine + outBox.Text;
 				var data_inter = GetShopData(Filename);
-				//outBox.Text = "(DailyData) data_inter: " + serializer.Serialize(data_inter) + Environment.NewLine + outBox.Text;
-				// outBox.Text = "(DailyData) Inter count: " + data_inter.Count + Environment.NewLine + outBox.Text;
 				Data.AddRange(data_inter);
-				
-				//outBox.Text = "Data count: " + Data.Count + Environment.NewLine + outBox.Text;
 			}
 			return Data;
 		}
@@ -489,8 +514,6 @@ public enum EventNames
 			if (Today) {
 				Data = GetShopData(LatestLog);
 			}
-			// outBox.Text = "(MoneyMade) day: " + day + Environment.NewLine + outBox.Text;
-			// outBox.Text = "(MoneyMade) Data: " + serializer.Serialize(Data) + Environment.NewLine + outBox.Text;
 			Data = Data.Where(s => s.Event.Contains(EventNames.Buy.ToString())).ToList();
 			foreach (StockItem Datum in Data) {
 				Sum += Datum.Earnings;
@@ -735,7 +758,7 @@ public enum EventNames
 					string_out = sr.ReadToEnd();
 				}
 			} catch (Exception e){
-				outBox.Text = "OldGetContent Error."+ e.Message + Environment.NewLine + outBox.Text;
+				//outBox.Text = "(OldGetContent) Error."+ e.Message + Environment.NewLine + outBox.Text;
 			}
 			return string_out;
 		}
@@ -855,7 +878,7 @@ public enum EventNames
 		return response_out;
 		}// end InvokeWebRequest	
 		//Discord
-		public void SendDiscordMessage (string content) {
+		public void SendMessageToWebhook (string content) {
 			string payload = "{\"content\": \"" + content + "\"}";
 			if (webHook.Contains("http")) {
 				InvokeWebRequest(webHook, WebRequestMethods.Http.Post, payload,false,true);
