@@ -1,6 +1,8 @@
 # AlcoveShopBot
 Generates out-of-stock alerts and financial reports from QuickShop buy/sell comments in Minecraft chat logs. Made for The Alcove player-run store on the ChillSMP Minecraft server. Not affiliated with any of those. 
 
+![Screenshot of Alcove Shop Bot](https://github.com/Gilgamech/AlcoveShopBot/blob/main/AlcoveShopBot.png)
+
 ### Install steps:
 
 - Copy to permanent location. Wherever you run it from, it has to stay there, or you'll have to put the webhook in again.
