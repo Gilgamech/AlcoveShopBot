@@ -32,7 +32,7 @@ using System.Web.Script.Serialization;
 namespace ShopBotNamespace {
     public class AlcoveShopBot : Form {
 //{ Ints
-        public int build = 1465;//Get-RebuildCsharpApp AlcoveShopBot
+        public int build = 1492;//Get-RebuildCsharpApp AlcoveShopBot
 		public string appName = "AlcoveShopBot";
 		public string StoreName = "Not Loaded";
 		public string StoreCoords = "Not Loaded";
@@ -60,8 +60,8 @@ namespace ShopBotNamespace {
 		System.Windows.Forms.Timer timer = new System.Windows.Forms.Timer();
 
         public Button runButton, stopButton;
-		public TextBox moneyMadeBox = new TextBox();
-		public Label moneyMadeLabel = new Label();
+		public TextBox shopRevenueBox = new TextBox();
+		public Label shopRevenueLabel = new Label();
 		public RichTextBox outBox = new RichTextBox();
 		public System.Drawing.Bitmap myBitmap;
 		public System.Drawing.Graphics pageGraphics;
@@ -162,14 +162,14 @@ public enum EventNames
 			// Icon icon = Icon.ExtractAssociatedIcon("C:\\repos\\AlcoveShopBot\\AlcoveShopBot.ico");
 			// this.Icon = icon;
 			buildMenuBar();
-			drawLabel(ref moneyMadeLabel, col0, row0, col2, row1, "Money made this \nplay session:");
-			drawTextBox(ref moneyMadeBox, col2, row0, col2, 0,"$0");
+			drawLabel(ref shopRevenueLabel, col0, row0, col2, row1, "Shop revenue this \nplay session:");
+			drawTextBox(ref shopRevenueBox, col2, row0, col2, 0,"$0");
  			//drawButton(ref sendButton, col2, row0, col2, row1, "Daily Report", sendButton_Click);
  			drawButton(ref runButton, col5, row0, col1, row1, "Run", runButton_Click);
  			drawButton(ref stopButton, col6, row0, col1, row1, "Stop", stopButton_Click);
 			drawRichTextBox(ref outBox, col0, row1, col7, row5,"Transaction Log", "outBox");
 			
-			moneyMadeBox.Font = new Font("Calibri", 14);
+			shopRevenueBox.Font = new Font("Calibri", 14);
 			outBox.Multiline = true;
 			outBox.AcceptsTab = true;
 			outBox.WordWrap = true;
@@ -197,9 +197,10 @@ public enum EventNames
 			
 			item = new MenuItem("Reports");
 			this.Menu.MenuItems.Add(item);
-				item.MenuItems.Add("Daily", new EventHandler(Daily_Report));
-				item.MenuItems.Add("Send Daily to Webhook", new EventHandler(Send_Daily_Report));
-				item.MenuItems.Add("Biweekly", new EventHandler(Biweekly_Report));
+				item.MenuItems.Add("Daily Revenue", new EventHandler(Daily_Revenue));
+				item.MenuItems.Add("Daily Sales Report", new EventHandler(Daily_Report));
+				item.MenuItems.Add("Send Daily Sales Report to Webhook", new EventHandler(Send_Daily_Report));
+				item.MenuItems.Add("Biweekly Report", new EventHandler(Biweekly_Report));
 			
 			item = new MenuItem("Help");
 			this.Menu.MenuItems.Add(item);
@@ -222,6 +223,7 @@ public enum EventNames
 		//ui
         public void runButton_Click(object sender, EventArgs e) {
 			Mode = "Run";
+			outBox.Text = Mode + Environment.NewLine + outBox.Text;
 			RefreshStatus();
 			RunBot(0);
 			timer.Start();
@@ -229,6 +231,7 @@ public enum EventNames
 
         public void stopButton_Click(object sender, EventArgs e) {
 			Mode = "Stop";
+			outBox.Text = Mode + Environment.NewLine + outBox.Text;
 			RefreshStatus();
 			timer.Stop();
         }// end stopButton_Click
@@ -270,7 +273,7 @@ public enum EventNames
 		}// end Edit_Webhook
 		
 		//Reports
-		public void Daily_Report(object sender, EventArgs e) {
+		public void Daily_Revenue(object sender, EventArgs e) {
 			var now = DateTime.Now;
 			string reportDay_string = now.AddDays(-1).Day.ToString();
 			int reportDay = 0;
@@ -287,35 +290,23 @@ public enum EventNames
 						//If reportDay is larger than (after) now.Day, then it's for last month.
 						int DaysInLastMonth = DateTime.DaysInMonth(now.AddDays(-daysAgo).Year, now.AddDays(-daysAgo).AddMonths(-1).Month);
 						daysAgo = DaysInLastMonth - (reportDay - now.Day);
-						outBox.Text = "DaysInLastMonth: " + DaysInLastMonth + Environment.NewLine + outBox.Text;
+						//outBox.Text = "DaysInLastMonth: " + DaysInLastMonth + Environment.NewLine + outBox.Text;
 					} else {
 						daysAgo = 0;
 					}  
-					outBox.Text = "daysAgo: " + daysAgo + Environment.NewLine + outBox.Text;
-					
-					
-					
 					string Date = new DateTime(now.AddDays(-daysAgo).Year, now.AddDays(-daysAgo).Month, now.AddDays(-daysAgo).Day).ToString("yyyy-MM-dd");
-					outBox.Text = BuildDailyReport(0, Date) + Environment.NewLine + outBox.Text;
+					outBox.Text = ShopRevenue(0, Date, true) + Environment.NewLine + outBox.Text;
 					break;
 			}
 		}// end Daily_Report
 		
-		public void Send_Daily_Report(object sender, EventArgs e) {
-			var now = DateTime.Now;
-			string day = "3";
-			//if day is greater than now.Day, then it's for last month. If day is less than now.Day, then it was earlier this month.
-			int dayNum = 0;
-			DialogResult result = drawInputDialog(ref day, "Day of month to send.");
-			switch (result) {
-				case DialogResult.OK:
-					int.TryParse(day, out dayNum);
-					string Date = new DateTime(now.AddDays(-dayNum).Year, now.AddDays(-dayNum).Month, now.AddDays(-dayNum).Day).ToString("yyyy-MM-dd");
-					SendMessageToWebhook (BuildDailyReport(0, Date)) ;
-					outBox.Text = "Report sent to webhook" + Environment.NewLine + outBox.Text;
-					break;
-			}
+		public void Daily_Report(object sender, EventArgs e) {
+			GetDailyReport();
 		}// end Daily_Report
+		
+		public void Send_Daily_Report(object sender, EventArgs e) {
+			GetDailyReport(true);
+		}// end Send_Daily_Report
 		
 		public void Biweekly_Report(object sender, EventArgs e) {
 			string days = "14";
@@ -354,7 +345,7 @@ public enum EventNames
 //////////////////////====================--------------------====================////////////////////
 //////////////////////////////////////////====================////////////////////////////////////////
 		public void RunBot (int setzero) {
-			moneyMadeBox.Text = MoneyMade(0,"",false,true);
+			shopRevenueBox.Text = ShopRevenue(0,"",false,true);
 			List<StockItem> ShopData = GetShopData("");
 			ShopData = ShopData.Where(s => s.Event.Contains("Empty")).ToList();
 			ShopData =  ShopData.Where(s => !OldData.Any(o => o.Timestamp.Contains(s.Timestamp))).ToList();
@@ -403,6 +394,7 @@ public enum EventNames
 			Data = Data.Where(d => !d.Contains("out of space")).ToList();
 			Data = Data.Where(d => !d.Contains("how many you wish")).ToList();
 			Data = Data.Where(d => !d.Contains("Shop purchase cancelled")).ToList();
+			Data = Data.Where(d => !d.Contains("get it refilled")).ToList();
 
 
 			//Data = Data.Where(x => x.notmatch("");
@@ -507,7 +499,7 @@ public enum EventNames
 			return Data;
 		}
 
-		public string MoneyMade (int day = 0, string Date = "", bool Format = false, bool Today = false) {
+		public string ShopRevenue (int day = 0, string Date = "", bool Format = false, bool Today = false) {
 			string sum_string = null;
 			decimal Sum = 0;
 			List<StockItem> Data = DailyData(day, Date);
@@ -598,8 +590,8 @@ public enum EventNames
 			for (int day = 1; day<(days +1); day++) {
 				string Date = new DateTime(now.AddDays(-day).Year, now.AddDays(-day).Month, now.AddDays(-day).Day).ToString("yyyy-MM-dd");
 				string Report = BuildDailyReport (0, Date, true);
-				string moneyMade = MoneyMade(0,Date,false);
-				string_out +=  Report + " | " + moneyMade + "\n";
+				string shopRevenue = ShopRevenue(0,Date,false);
+				string_out +=  Report + " | " + shopRevenue + "\n";
 			}
 			return string_out;
 		}
@@ -618,6 +610,39 @@ public enum EventNames
 				stopButton.BackColor = color_ActiveBack;
 			} 
 		} 
+
+		public void GetDailyReport(bool SendToWebhook = false) {
+			var now = DateTime.Now;
+			string reportDay_string = now.AddDays(-1).Day.ToString();
+			int reportDay = 0;
+			int daysAgo = 0;
+			DialogResult result = drawInputDialog(ref reportDay_string, "Day of month:");
+			switch (result) {
+				case DialogResult.OK:
+					int.TryParse(reportDay_string, out reportDay);
+					//Numbers representing time increase with time. 
+					if (now.Day > reportDay) {
+						//If now.Day is larger than (after) reportDay, then the report is for earlier this month. 
+						daysAgo = now.Day - reportDay;
+					} else if (reportDay > now.Day) {
+						//If reportDay is larger than (after) now.Day, then it's for last month.
+						int DaysInLastMonth = DateTime.DaysInMonth(now.AddDays(-daysAgo).Year, now.AddDays(-daysAgo).AddMonths(-1).Month);
+						daysAgo = DaysInLastMonth - (reportDay - now.Day);
+						//outBox.Text = "DaysInLastMonth: " + DaysInLastMonth + Environment.NewLine + outBox.Text;
+					} else {
+						daysAgo = 0;
+					}  
+					string Date = new DateTime(now.AddDays(-daysAgo).Year, now.AddDays(-daysAgo).Month, now.AddDays(-daysAgo).Day).ToString("yyyy-MM-dd");
+					string out_text = BuildDailyReport(0, Date);
+					outBox.Text =  out_text + Environment.NewLine + outBox.Text;
+					if (SendToWebhook) {
+						SendMessageToWebhook(serializer.Serialize(out_text).Replace("\"",""));
+						outBox.Text = "Report sent to webhook:" + Environment.NewLine + outBox.Text;
+					}
+					break;
+			}
+		}
+
 
 
 
@@ -745,7 +770,7 @@ public enum EventNames
 			logFileReader.Close();
 			logFileStream.Close();
 			} catch (Exception e){
-				outBox.Text = "OldGetContent Error."+ e.Message + Environment.NewLine + outBox.Text;
+				//outBox.Text = "OldGetContent Error."+ e.Message + Environment.NewLine + outBox.Text;
 			}
 			return fiileString;
 		}
@@ -856,8 +881,7 @@ public enum EventNames
 				} 
 
 				} catch (Exception e) {
-					//MessageBox.Show("Wrong request!" + ex.Message, "Error");
-					response_out = "Request Error: " + e.Message;
+					outBox.Text = "(InvokeWebRequest) Request Error: " + e.Message + Environment.NewLine + outBox.Text;
 				}
 				
 				try {
@@ -873,7 +897,7 @@ public enum EventNames
 					}
 					sr.Close();
 				} catch (Exception e) {
-					response_out = "Response Error: " + e.Message;
+					outBox.Text = "(InvokeWebRequest) Response Error: " + e.Message + Environment.NewLine + outBox.Text;
 				}
 		return response_out;
 		}// end InvokeWebRequest	
