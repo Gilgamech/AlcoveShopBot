@@ -15,7 +15,7 @@ Generates out-of-stock alerts and financial reports from QuickShop buy/sell comm
 
 ![Windows Protected Your PC screen with Run Anyway button](https://github.com/Gilgamech/AlcoveShopBot/blob/main/RunAnyway.png)
 
-- App will open. Click the `Edit` menu, then `Edit Webhook`. Copy the URL that I will give you, and paste it in here. (Be careful with it, or someone could send David Hasselhoff mem to your shop channel!)
+- App will open. Click the `Edit` menu, then `Edit Webhook`. Copy the URL and paste it in here. (Be careful with it, or someone could send David Hasselhoff mem to your shop channel!)
 - Click "Run" and the bot should announce all old out of stocks in your log. 
 
 It might freeze sometimes, if your Minecraft log gets really big (more than 1 million lines), so wait bit. If it freezes for a really long time, click "Stop" a few times and wait for a while, to see if it stops and was just reading a long file. If it never stops, open an [Issue](https://github.com/Gilgamech/AlcoveShopBot/issues).
