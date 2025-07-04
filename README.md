@@ -15,8 +15,13 @@ Generates out-of-stock alerts and financial reports from QuickShop buy/sell comm
 
 ![Windows Protected Your PC screen with Run Anyway button](https://github.com/Gilgamech/AlcoveShopBot/blob/main/RunAnyway.png)
 
-- App will open. Click the `Edit` menu, then `Edit Webhook`. Copy the URL and paste it in here. (Be careful with it, or someone could send David Hasselhoff memes to your shop channel!)
-- Click "Run" and the bot should announce all old out of stocks in your log. 
+- App will open. 
+- Click "Run" and the bot should display all old out of stocks in your log. 
+- App will continue to log events. 
+- Adding a webhook for a Discord channel will also send these messages to the Discord channel. 
+  - Click the `Edit` menu, then `Edit Webhook`. 
+  - Go into Discord, hold the channel name or click the gear to "Edit Channel", find and select the "Integrations" section, then the "Webhooks" section. Add a new webhook, and name it. (Please refer to [Discord's Intro to Webhooks](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks) for more info.)
+  - Copy the webhook URL from Discord and paste it in here. (Be careful with the webhook URL, or someone could send David Hasselhoff memes to your shop channel!)
 
 It might freeze sometimes, if your Minecraft log gets really big (more than 1 million lines), so wait bit. If it freezes for a really long time, click "Stop" a few times and wait for a while, to see if it stops and was just reading a long file. If it never stops, open an [Issue](https://github.com/Gilgamech/AlcoveShopBot/issues).
 
