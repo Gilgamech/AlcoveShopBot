@@ -26,7 +26,7 @@ Generates out-of-stock alerts and financial reports from QuickShop buy/sell comm
     - Then the "Webhooks" section. 
 	- Add a new webhook, and name it. 
 	- Please refer to [Discord's Intro to Webhooks](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks) for more info.
-  - Copy the webhook URL from Discord and paste it in here. 
+  - Copy the webhook URL from Discord. Go back to the Shop Bot app, and paste it in the `Edit Webhook` box. 
     - Be careful with the webhook URL - don't share it or let others see it. Or someone could send David Hasselhoff memes (or worse) to your shop channel!
 
 It might freeze sometimes, if your Minecraft log gets really big (more than 1 million lines), so wait bit. If it freezes for a really long time, click "Stop" a few times and wait for a while, to see if it stops and was just reading a long file. If it never stops, open an [Issue](https://github.com/Gilgamech/AlcoveShopBot/issues).
