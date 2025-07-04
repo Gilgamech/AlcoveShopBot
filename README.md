@@ -20,8 +20,14 @@ Generates out-of-stock alerts and financial reports from QuickShop buy/sell comm
 - App will continue to log events. 
 - Adding a webhook for a Discord channel will also send these messages to the Discord channel. 
   - Click the `Edit` menu, then `Edit Webhook`. 
-  - Go into Discord, hold the channel name or click the gear to "Edit Channel", find and select the "Integrations" section, then the "Webhooks" section. Add a new webhook, and name it. (Please refer to [Discord's Intro to Webhooks](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks) for more info.)
-  - Copy the webhook URL from Discord and paste it in here. (Be careful with the webhook URL, or someone could send David Hasselhoff memes to your shop channel!)
+  - Go to Discord:
+    - Hold the channel name or click the gear to "Edit Channel"
+    - Find and select the "Integrations" section
+    - Then the "Webhooks" section. 
+	- Add a new webhook, and name it. 
+	- Please refer to [Discord's Intro to Webhooks](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks) for more info.
+  - Copy the webhook URL from Discord and paste it in here. 
+    - Be careful with the webhook URL - don't share it or let others see it. Or someone could send David Hasselhoff memes (or worse) to your shop channel!
 
 It might freeze sometimes, if your Minecraft log gets really big (more than 1 million lines), so wait bit. If it freezes for a really long time, click "Stop" a few times and wait for a while, to see if it stops and was just reading a long file. If it never stops, open an [Issue](https://github.com/Gilgamech/AlcoveShopBot/issues).
 
