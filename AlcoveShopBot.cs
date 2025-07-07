@@ -32,28 +32,12 @@ using System.Web.Script.Serialization;
 namespace ShopBotNamespace {
     public class AlcoveShopBot : Form {
 //{ Ints
-        public int build = 1493;//Get-RebuildCsharpApp AlcoveShopBot
+        public int build = 1494;//Get-RebuildCsharpApp AlcoveShopBot
 		public string appName = "AlcoveShopBot";
 		public string StoreName = "Not Loaded";
 		public string StoreCoords = "Not Loaded";
 		public string webHook = "Not Loaded";
 		public string appTitle = " Shop Bot - 1.";
-		
-		/*
-		account = AlcoveShopBot.Properties.Settings.Default.Account;
-		AlcoveShopBot.Properties.Settings.Default.Account = account;
-		AlcoveShopBot.Properties.Settings.Default.Save( );
-		
-		textboxPassword_TextChanged(object sender, EventArgs e) {
-			if(PostTracker.Properties.Settings.Default.Password || textboxPassword.Text
-				// . . . check for other properties can ( and should ) come in here
-				) {
-					UpdateApplyButton();
-					// Your action comes here, for example
-			}
-		}
-
-		*/
 
 		List<StockItem>  OldData = new List<StockItem>();
 		JavaScriptSerializer serializer = new JavaScriptSerializer();
@@ -75,6 +59,7 @@ namespace ShopBotNamespace {
 		// public static string MainFolder = "C:\\Users\\"+WindowsUsername+"\\AppData\\Roaming\\.minecraft\\";
 		// public static string logFolder = MainFolder+"\\logs"; //Logs folder;
 		public static string logFolder = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "\\.minecraft\\logs";
+		//public string logFolder = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + "\\Packages\\Microsoft.MinecraftUWP_8wekyb3d8bbwe\\LocalState\\logs"
 		public string LatestLog = logFolder+"\\latest.log";
 		
 		//ui
@@ -374,7 +359,7 @@ public enum EventNames
 					StreamReader logFileReader = new StreamReader(logFileStream);
 					while (!logFileReader.EndOfStream) {
 						fiileString = logFileReader.ReadLine();
-						string[] fileContents = fiileString.Replace("] [Render thread/INFO]: [System] [CHAT] ",",").Split('\n');
+						string[] fileContents = fiileString.Replace("] [Render thread/INFO]: [System] [CHAT] ",",").Replace("[","").Replace("]","").Split('\n');
 						Data.AddRange(fileContents.Where(d => d.Contains("SHOPS ▶ ")).ToList());
 					}
 					logFileReader.Close();
@@ -383,7 +368,7 @@ public enum EventNames
 			} catch (Exception FileStreamError) {
 				//outBox.Text = "(GetShopData) FileStreamError: " + FileStreamError.Message + Environment.NewLine + outBox.Text;
 				try {
-			string[] fileContents = GetContent(Logfile, true).Replace("] [Render thread/INFO]: [System] [CHAT] ",",").Split('\n');
+			string[] fileContents = GetContent(Logfile, true).Replace("] [Render thread/INFO]: [System] [CHAT] ",",").Replace("[","").Replace("]","").Split('\n');
 			Data.AddRange(fileContents.Where(d => d.Contains("SHOPS ▶ ")).ToList());
 				} catch (Exception GetContentError) {
 					//outBox.Text = "(GetShopData) GetContentError: " + GetContentError.Message + Environment.NewLine + outBox.Text;
