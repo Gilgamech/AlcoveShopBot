@@ -32,7 +32,7 @@ using System.Web.Script.Serialization;
 namespace ShopBotNamespace {
     public class AlcoveShopBot : Form {
 //{ Ints
-        public int build = 1494;//Get-RebuildCsharpApp AlcoveShopBot
+        public int build = 1543;//Get-RebuildCsharpApp AlcoveShopBot
 		public string appName = "AlcoveShopBot";
 		public string StoreName = "Not Loaded";
 		public string StoreCoords = "Not Loaded";
@@ -336,6 +336,7 @@ public enum EventNames
 			ShopData =  ShopData.Where(s => !OldData.Any(o => o.Timestamp.Contains(s.Timestamp))).ToList();
 			if (ShopData.Any() == true) {
 				foreach (StockItem item in ShopData) {
+					item.ItemName = item.ItemName.Replace("\r","").Replace("\n","");
 					string out_msg = "Empty shop: Player `" + item.PlayerName + "` has purchased the last "+ item.StockQty + " " + item.ItemName+"!";
 					outBox.Text = "[" + item.Timestamp + "] " +  out_msg + Environment.NewLine + outBox.Text;
 					SendMessageToWebhook(out_msg);
@@ -349,6 +350,7 @@ public enum EventNames
 				Logfile = LatestLog;
 			}
 			List<StockItem> out_var = new List<StockItem>();
+			// List<string> Raw_Data = new List<string>();
 			List<string> Data = new List<string>();
 			string fiileString = null;
 			StockItem stockitem = new StockItem();
@@ -360,18 +362,31 @@ public enum EventNames
 					while (!logFileReader.EndOfStream) {
 						fiileString = logFileReader.ReadLine();
 						string[] fileContents = fiileString.Replace("] [Render thread/INFO]: [System] [CHAT] ",",").Replace("[","").Replace("]","").Split('\n');
+						// string[] fileContents = fiileString.Replace("] [Render thread/INFO]: [System] [CHAT] ",",").Replace("[","").Replace("]","").Replace("Your shop at","").Split('\n');
+
+						// fiileString = logFileReader.ReadLine();
+						// fiileString.Replace("] [Render thread/INFO]: [System] [CHAT] ",",").Replace("[","").Replace("]","");
+						// fiileString = fiileString.Replace("Your shop at","SHOPBOTFLAG Your shop at");
+						// fiileString = fiileString.Replace("to your shop {3}","SHOPBOTFLAG to your shop {3}");
+						// fiileString = fiileString.Replace("from your shop and you earned","SHOPBOTFLAG from your shop and you earned");
+						
 						Data.AddRange(fileContents.Where(d => d.Contains("SHOPS ▶ ")).ToList());
+				// outBox.Text = "(GetShopData) Data: " + serializer.Serialize(Data) + Environment.NewLine + outBox.Text;
+						// Data.AddRange(Raw_Data.Where(d => d.Contains("has run out of")));
+						// Data.AddRange(Raw_Data.Where(d => d.Contains("is now full")));
+						// Data.AddRange(Raw_Data.Where(d => d.Contains("to your shop")));
+						// Data.AddRange(Raw_Data.Where(d => d.Contains("from your shop")));
 					}
 					logFileReader.Close();
 					logFileStream.Close();
-
+			
 			} catch (Exception FileStreamError) {
 				//outBox.Text = "(GetShopData) FileStreamError: " + FileStreamError.Message + Environment.NewLine + outBox.Text;
 				try {
 			string[] fileContents = GetContent(Logfile, true).Replace("] [Render thread/INFO]: [System] [CHAT] ",",").Replace("[","").Replace("]","").Split('\n');
 			Data.AddRange(fileContents.Where(d => d.Contains("SHOPS ▶ ")).ToList());
 				} catch (Exception GetContentError) {
-					//outBox.Text = "(GetShopData) GetContentError: " + GetContentError.Message + Environment.NewLine + outBox.Text;
+					// outBox.Text = "(GetShopData) GetContentError: " + GetContentError.Message + Environment.NewLine + outBox.Text;
 					fiileString = FileStreamError.Message + "; " + GetContentError.Message;
 				}
 			}
@@ -382,12 +397,11 @@ public enum EventNames
 			Data = Data.Where(d => !d.Contains("get it refilled")).ToList();
 			Data = Data.Where(d => !d.Contains("look at one")).ToList();
 
-
 			//Data = Data.Where(x => x.notmatch("");
 			foreach (string Item in Data) {
 				n++;
 				stockitem = new StockItem();
-				//outBox.Text = "(GetShopData) Item " + serializer.Serialize(Item) + Environment.NewLine + outBox.Text;
+				// outBox.Text = "(GetShopData) Item " + serializer.Serialize(Item) + Environment.NewLine + outBox.Text;
 				//Use all 3 coords because some places have 2 buy shops stacked at the same X and Z. 
 				if (Item.Contains("has run out of")){
 						string[] SplitItem = Item.Replace("[","").Replace("] Your shop at",",").Replace(" has run out of",",").Replace("!","").Replace(", ",",").Split(',');
@@ -740,7 +754,7 @@ public enum EventNames
 		}
 		//File
 		//Non-locking alternative: System.IO.File.ReadAllBytes(Filename);
-		public string GetContent(string Filename, bool NoErrorMessage = false) {
+		public string GetContent(string Filename, bool NoErrorMessage = false, bool Debug = false) {
 			string fiileString = null;
 			try {
 			//outBox.Text = "fiileString Start" +  Environment.NewLine + outBox.Text;
@@ -748,15 +762,21 @@ public enum EventNames
 			FileStream logFileStream = new FileStream(Filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
 			StreamReader logFileReader = new StreamReader(logFileStream);
 			while (!logFileReader.EndOfStream) {
-				//outBox.Text = "fiileString While" +  Environment.NewLine + outBox.Text;
+				// outBox.Text = "(GetContent) fiileString While."+ fiileString.Length + Environment.NewLine + outBox.Text;
 				fiileString = logFileReader.ReadLine();
-				//outBox.Text = fiileString.Length + Environment.NewLine + outBox.Text;
+			if (Debug == true) {
+				outBox.Text = "(GetContent) fiileString.Length."+ fiileString.Length + Environment.NewLine + outBox.Text;
 			}
-			//outBox.Text = "FileStream Success."+ fiileString.Length + Environment.NewLine + outBox.Text;
+			}
+			if (Debug == true) {
+				outBox.Text = "(GetContent) FileStream Success."+ fiileString.Length + Environment.NewLine + outBox.Text;
+			}
 			logFileReader.Close();
 			logFileStream.Close();
 			} catch (Exception e){
-				//outBox.Text = "OldGetContent Error."+ e.Message + Environment.NewLine + outBox.Text;
+				if (Debug == true) {
+					outBox.Text = "(GetContent) Error."+ e.Message + Environment.NewLine + outBox.Text;
+				}
 			}
 			return fiileString;
 		}
@@ -769,7 +789,7 @@ public enum EventNames
 					string_out = sr.ReadToEnd();
 				}
 			} catch (Exception e){
-				//outBox.Text = "(OldGetContent) Error."+ e.Message + Environment.NewLine + outBox.Text;
+				outBox.Text = "(OldGetContent) Error."+ e.Message + Environment.NewLine + outBox.Text;
 			}
 			return string_out;
 		}
