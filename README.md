@@ -1,7 +1,7 @@
-# AlcoveShopBot
+# MoarShopBot
 Generates out-of-stock alerts and financial reports from QuickShop buy/sell comments in Minecraft chat logs. Made for The Alcove player-run store on the ChillSMP Minecraft server. Not affiliated with any of those. 
 
-![Screenshot of Alcove Shop Bot](https://github.com/Gilgamech/AlcoveShopBot/blob/main/AlcoveShopBot.png)
+![Screenshot of Moar Shop Bot](https://github.com/Gilgamech/AlcoveShopBot/blob/main/AlcoveShopBot.png)
 
 ### Install steps:
 
