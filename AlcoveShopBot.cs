@@ -1,7 +1,7 @@
 //Copyright 2025 Gilgamech Technologies
 //Author: Stephen Gillie
 //Created 06/22/2025
-//Updated 06/22/2025
+//Updated 10/28/2025
 //Alcove was the new finditem.
 
 
@@ -30,10 +30,10 @@ using System.Windows.Forms;
 using System.Web.Script.Serialization;
 
 namespace ShopBotNamespace {
-    public class AlcoveShopBot : Form {
+    public class MoarShopBot : Form {
 //{ Ints
-        public int build = 1548;//Get-RebuildCsharpApp AlcoveShopBot
-		public string appName = "AlcoveShopBot";
+        public int build = 1552;//Get-RebuildCsharpApp AlcoveShopBot
+		public string appName = "MoarShopBot";
 		public string StoreName = "Not Loaded";
 		public string StoreCoords = "Not Loaded";
 		public string webHook = "Not Loaded";
@@ -116,8 +116,8 @@ public enum EventNames
 		public string EmptyText = "has run out of";//[06:07:40] [Rend
 		//public void OldDate = get-date -f dd
 
-		//public string DataFile = "C:\\repos\\AlcoveShopBot\\AlcoveShopBot.csv";
-		//public string OwnerList = "C:\\repos\\AlcoveShopBot\\ChillPWOwnerList.csv";
+		//public string DataFile = "C:\\repos\\MoarShopBot\\MoarShopBot.csv";
+		//public string OwnerList = "C:\\repos\\MoarShopBot\\ChillPWOwnerList.csv";
 
 
 
@@ -133,18 +133,18 @@ public enum EventNames
         static void Main() {
             Application.EnableVisualStyles();
 			Application.SetCompatibleTextRenderingDefault(false);
-			Application.Run(new AlcoveShopBot());
+			Application.Run(new MoarShopBot());
         }// end Main
 
-        public AlcoveShopBot() {
-			LoadSetting("StoreName", ref StoreName, "Alcove"); 
+        public MoarShopBot() {
+			LoadSetting("StoreName", ref StoreName, "Moar"); 
 			LoadSetting("StoreCoords", ref StoreCoords, "StoreCoords"); 
 			LoadSetting("webHook", ref webHook, "webHook"); 
 			this.Text = StoreName + appTitle + build;
 			this.Size = new Size(WindowWidth,WindowHeight);
 			this.Resize += new System.EventHandler(this.OnResize);
 			this.AutoScroll = true;
-			// Icon icon = Icon.ExtractAssociatedIcon("C:\\repos\\AlcoveShopBot\\AlcoveShopBot.ico");
+			// Icon icon = Icon.ExtractAssociatedIcon("C:\\repos\\MoarShopBot\\MoarShopBot.ico");
 			// this.Icon = icon;
 			buildMenuBar();
 			drawLabel(ref shopRevenueLabel, col0, row0, col2, row1, "Shop revenue this \nplay session:");
@@ -165,7 +165,7 @@ public enum EventNames
 
 			timer.Interval = (10 * 1000);
 			timer.Tick += new EventHandler(timer_everysecond);
-        } // end AlcoveShopBot
+        } // end MoarShopBot
 
 		public void buildMenuBar (){
 			this.Menu = new MainMenu();
@@ -305,9 +305,9 @@ public enum EventNames
 			
 		//Help
 		public void About_Click (object sender, EventArgs e) {
-			string AboutText = "Alcove Shop Bot" + Environment.NewLine;
+			string AboutText = "Moar Shop Bot" + Environment.NewLine;
 			AboutText += "Generates out-of-stock alerts and financial reports from QuickShop" + Environment.NewLine;
-			AboutText += "Buy/Sell comments in Minecraft chat logs. Made for The Alcove player" + Environment.NewLine;
+			AboutText += "Buy/Sell comments in Minecraft chat logs. Made for The Moar player" + Environment.NewLine;
 			AboutText += "-run store on the ChillSMP Minecraft server. But this product isn't" + Environment.NewLine;
 			AboutText += "affiliated with any of those." + Environment.NewLine;
 			AboutText += "" + Environment.NewLine;
@@ -315,7 +315,7 @@ public enum EventNames
 			AboutText += "(C) 2025 Gilgamech Technologies" + Environment.NewLine;
 			AboutText += "" + Environment.NewLine;
 			AboutText += "Report bugs & request features:" + Environment.NewLine;
-			AboutText += "https://github.com/Gilgamech/AlcoveShopBot/issues" + Environment.NewLine;
+			AboutText += "https://github.com/Gilgamech/MoarShopBot/issues" + Environment.NewLine;
 			MessageBox.Show(AboutText);
 		} // end Link_Click
 
@@ -352,7 +352,7 @@ public enum EventNames
 			List<StockItem> out_var = new List<StockItem>();
 			// List<string> Raw_Data = new List<string>();
 			List<string> Data = new List<string>();
-			string fiileString = null;
+			string fileString = null;
 			StockItem stockitem = new StockItem();
 			int n = 0;
 			
@@ -360,15 +360,15 @@ public enum EventNames
 					FileStream logFileStream = new FileStream(Logfile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
 					StreamReader logFileReader = new StreamReader(logFileStream);
 					while (!logFileReader.EndOfStream) {
-						fiileString = logFileReader.ReadLine();
-						string[] fileContents = fiileString.Replace("] [Render thread/INFO]: [System] [CHAT] ",",").Replace("[","").Replace("]","").Split('\n');
-						// string[] fileContents = fiileString.Replace("] [Render thread/INFO]: [System] [CHAT] ",",").Replace("[","").Replace("]","").Replace("Your shop at","").Split('\n');
+						fileString = logFileReader.ReadLine();
+						string[] fileContents = fileString.Replace(", ","::").Replace(",","").Replace("::",", ").Replace("] [Render thread/INFO]: [System] [CHAT] ",",").Replace("[","").Replace("]","").Split('\n');
+						// string[] fileContents = fileString.Replace("] [Render thread/INFO]: [System] [CHAT] ",",").Replace("[","").Replace("]","").Replace("Your shop at","").Split('\n');
 
-						// fiileString = logFileReader.ReadLine();
-						// fiileString.Replace("] [Render thread/INFO]: [System] [CHAT] ",",").Replace("[","").Replace("]","");
-						// fiileString = fiileString.Replace("Your shop at","SHOPBOTFLAG Your shop at");
-						// fiileString = fiileString.Replace("to your shop {3}","SHOPBOTFLAG to your shop {3}");
-						// fiileString = fiileString.Replace("from your shop and you earned","SHOPBOTFLAG from your shop and you earned");
+						// fileString = logFileReader.ReadLine();
+						// fileString.Replace("] [Render thread/INFO]: [System] [CHAT] ",",").Replace("[","").Replace("]","");
+						// fileString = fileString.Replace("Your shop at","SHOPBOTFLAG Your shop at");
+						// fileString = fileString.Replace("to your shop {3}","SHOPBOTFLAG to your shop {3}");
+						// fileString = fileString.Replace("from your shop and you earned","SHOPBOTFLAG from your shop and you earned");
 						
 						Data.AddRange(fileContents.Where(d => d.Contains("SHOPS ▶ ")).ToList());
 				// outBox.Text = "(GetShopData) Data: " + serializer.Serialize(Data) + Environment.NewLine + outBox.Text;
@@ -387,7 +387,7 @@ public enum EventNames
 			Data.AddRange(fileContents.Where(d => d.Contains("SHOPS ▶ ")).ToList());
 				} catch (Exception GetContentError) {
 					// outBox.Text = "(GetShopData) GetContentError: " + GetContentError.Message + Environment.NewLine + outBox.Text;
-					fiileString = FileStreamError.Message + "; " + GetContentError.Message;
+					fileString = FileStreamError.Message + "; " + GetContentError.Message;
 				}
 			}
 			Data = Data.Where(d => !d.Contains("Enter all in chat")).ToList();
@@ -400,7 +400,10 @@ public enum EventNames
 			Data = Data.Where(d => !d.Contains("shop is now")).ToList();
 			Data = Data.Where(d => !d.Contains("is nothing in your")).ToList();
 			Data = Data.Where(d => !d.Contains("is already")).ToList();
+			Data = Data.Where(d => !d.Contains("on data from")).ToList();
 			Data = Data.Where(d => !d.Contains("result in")).ToList();
+			Data = Data.Where(d => !d.Contains("| Item:")).ToList();
+			Data = Data.Where(d => !d.Contains("Price per")).ToList();
 
 			//Data = Data.Where(x => x.notmatch("");
 			foreach (string Item in Data) {
@@ -409,26 +412,28 @@ public enum EventNames
 				// outBox.Text = "(GetShopData) Item " + serializer.Serialize(Item) + Environment.NewLine + outBox.Text;
 				//Use all 3 coords because some places have 2 buy shops stacked at the same X and Z. 
 				if (Item.Contains("has run out of")){
-						string[] SplitItem = Item.Replace("[","").Replace("] Your shop at",",").Replace(" has run out of",",").Replace("!","").Replace(", ",",").Split(',');
+						string[] SplitItem = Item.Replace("Your shop at",",").Replace(" has run out of",",").Replace("!","").Replace(", ",",").Split(',');
+						// outBox.Text = "(GetShopData) Item IndexOf 4 " + (Data[Data.IndexOf(Item)-1].Split(' '))[4] + Environment.NewLine + outBox.Text;
 						//06:07:40 ,15226, 63, 20487, Cocoa Beans
 						stockitem.Event = "Empty";
 						stockitem.Timestamp = SplitItem[0];
-						stockitem.XLoc = Convert.ToInt32(SplitItem[1].Split(' ').Last());
-						stockitem.YLoc = Convert.ToInt32(SplitItem[2]);
-						stockitem.ZLoc = Convert.ToInt32(SplitItem[3]);
-						stockitem.ItemName = SplitItem[4];
+						stockitem.XLoc = Convert.ToInt32(SplitItem[2]);//.Split(' ').Last());
+						stockitem.YLoc = Convert.ToInt32(SplitItem[3]);
+						stockitem.ZLoc = Convert.ToInt32(SplitItem[4]);
+						stockitem.ItemName = SplitItem[5];
 						stockitem.StockQty = Convert.ToInt32((Data[Data.IndexOf(Item)-1].Split(' '))[4]);
 						stockitem.PlayerName = (Data[Data.IndexOf(Item)-1].Split(' '))[2];
 		            } else if (Item.Contains("is now full")){
-						string[] SplitItem = Item.Replace("[","").Replace("] Your shop at",",").Replace(" is now full.",", ").Replace("!","").Replace(", ",",").Split(',');
+						string[] SplitItem = Item.Replace("Your shop at",",").Replace(" is now full.",", ").Replace("!","").Replace(", ",",").Split(',');
 						//05:33:18, 15274, 66, 20463,
 						stockitem.Event = "Full";
 						stockitem.Timestamp = SplitItem[0];
-						stockitem.XLoc = Convert.ToInt32(SplitItem[1].Split(' ').Last());
-						stockitem.YLoc = Convert.ToInt32(SplitItem[2]);
-						stockitem.ZLoc = Convert.ToInt32(SplitItem[3]);
+						stockitem.ItemName = "";
+						stockitem.XLoc = Convert.ToInt32(SplitItem[2]);//.Split(' ').Last());
+						stockitem.YLoc = Convert.ToInt32(SplitItem[3]);
+						stockitem.ZLoc = Convert.ToInt32(SplitItem[4]);
 		            } else if (Item.Contains("to your shop")){
-						string[] SplitItem = Item.Replace("[","").Replace("]",",").Replace(" sold ",", ").Replace(" to your shop {3}.",", ").Replace("!","").Split(',');
+						string[] SplitItem = Item.Replace("]",",").Replace(" sold ",", ").Replace(" to your shop {3}.",", ").Replace("!","").Split(',');
 						 //05:40:12, kota490, 1728 Sea Lantern,
 						stockitem.Event = "Sell";
 						stockitem.Timestamp = SplitItem[0];
@@ -437,7 +442,7 @@ public enum EventNames
 						stockitem.ItemName = String.Join(" ", SplitItem[2].Split(' ').Skip(2).Take(9));
 						// outBox.Text = stockitem.Timestamp + " - " + stockitem.Event + " - " + stockitem.ItemName + " - " + Environment.NewLine + outBox.Text;
 		            } else if (Item.Contains("from your shop")){
-						string[] SplitItem = Item.Replace("[","").Replace("]",",").Replace(" purchased ",", ").Replace(" from your shop and you earned ",", ").Replace("(","").Split(',');
+						string[] SplitItem = Item.Replace("]",",").Replace(" purchased ",", ").Replace(" from your shop and you earned ",", ").Replace("(","").Split(',');
 						// outBox.Text = "(GetShopData) SplitItem " + serializer.Serialize(SplitItem) + Environment.NewLine + outBox.Text;
 						// outBox.Text = "(GetShopData) Item " + serializer.Serialize(Item) + Environment.NewLine + outBox.Text;
 						//05:47:12 _Blackjack29313, 2 Grindstone, 9.50 0.50 in taxes).
@@ -453,6 +458,9 @@ public enum EventNames
 						// outBox.Text = "(GetShopData) stockitem: " + serializer.Serialize(stockitem) + Environment.NewLine + outBox.Text;
 					} else {}
 				//outBox.Text = "(GetShopData) stockitem " + serializer.Serialize(stockitem) + Environment.NewLine + outBox.Text;
+				if (stockitem.ItemName.Contains("Shulker box")) {
+					stockitem.StockQty = stockitem.StockQty * 1728;
+				}
 				out_var.Add(stockitem);
 			}//end foreach
 		return out_var;
@@ -517,7 +525,7 @@ public enum EventNames
 			}
 			sum_string = Sum.ToString("C2");
 			if (Format) {
-				sum_string = Date + " Alcove made " + sum_string;
+				sum_string = Date + " Moar made " + sum_string;
 			}
 			return sum_string;
 		}
@@ -760,21 +768,21 @@ public enum EventNames
 		//File
 		//Non-locking alternative: System.IO.File.ReadAllBytes(Filename);
 		public string GetContent(string Filename, bool NoErrorMessage = false, bool Debug = false) {
-			string fiileString = null;
+			string fileString = null;
 			try {
-			//outBox.Text = "fiileString Start" +  Environment.NewLine + outBox.Text;
+			//outBox.Text = "fileString Start" +  Environment.NewLine + outBox.Text;
 			
 			FileStream logFileStream = new FileStream(Filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
 			StreamReader logFileReader = new StreamReader(logFileStream);
 			while (!logFileReader.EndOfStream) {
-				// outBox.Text = "(GetContent) fiileString While."+ fiileString.Length + Environment.NewLine + outBox.Text;
-				fiileString = logFileReader.ReadLine();
+				// outBox.Text = "(GetContent) fileString While."+ fileString.Length + Environment.NewLine + outBox.Text;
+				fileString = logFileReader.ReadLine();
 			if (Debug == true) {
-				outBox.Text = "(GetContent) fiileString.Length."+ fiileString.Length + Environment.NewLine + outBox.Text;
+				outBox.Text = "(GetContent) fileString.Length."+ fileString.Length + Environment.NewLine + outBox.Text;
 			}
 			}
 			if (Debug == true) {
-				outBox.Text = "(GetContent) FileStream Success."+ fiileString.Length + Environment.NewLine + outBox.Text;
+				outBox.Text = "(GetContent) FileStream Success."+ fileString.Length + Environment.NewLine + outBox.Text;
 			}
 			logFileReader.Close();
 			logFileStream.Close();
@@ -783,7 +791,7 @@ public enum EventNames
 					outBox.Text = "(GetContent) Error."+ e.Message + Environment.NewLine + outBox.Text;
 				}
 			}
-			return fiileString;
+			return fileString;
 		}
 		public string OldGetContent(string Filename, bool NoErrorMessage = false) {
 			string string_out = "";
@@ -1175,7 +1183,7 @@ public enum EventNames
 			input = textBox.Text;
 			return result;
 		}
-    }// end AlcoveShopBot
+    }// end MoarShopBot
 	
 	public class StockItem  {
 	  public string ItemName;
