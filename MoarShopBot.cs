@@ -32,7 +32,7 @@ using System.Web.Script.Serialization;
 namespace ShopBotNamespace {
     public class MoarShopBot : Form {
 //{ Ints
-        public int build = 1552;//Get-RebuildCsharpApp AlcoveShopBot
+        public int build = 1553;//Get-RebuildCsharpApp MoarShopBot
 		public string appName = "MoarShopBot";
 		public string StoreName = "Not Loaded";
 		public string StoreCoords = "Not Loaded";
@@ -404,6 +404,7 @@ public enum EventNames
 			Data = Data.Where(d => !d.Contains("result in")).ToList();
 			Data = Data.Where(d => !d.Contains("| Item:")).ToList();
 			Data = Data.Where(d => !d.Contains("Price per")).ToList();
+			Data = Data.Where(d => !d.Contains("transaction limit")).ToList();
 
 			//Data = Data.Where(x => x.notmatch("");
 			foreach (string Item in Data) {
