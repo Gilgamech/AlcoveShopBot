@@ -32,7 +32,7 @@ using System.Web.Script.Serialization;
 namespace ShopBotNamespace {
     public class MoarShopBot : Form {
 //{ Ints
-        public int build = 1553;//Get-RebuildCsharpApp MoarShopBot
+        public int build = 1554;//Get-RebuildCsharpApp MoarShopBot
 		public string appName = "MoarShopBot";
 		public string StoreName = "Not Loaded";
 		public string StoreCoords = "Not Loaded";
@@ -501,7 +501,7 @@ public enum EventNames
 				int.TryParse(now.AddDays(-1).ToString("dd"), out day);
 			}
 			if (Date == "") {
-				Date = new DateTime(now.Year, now.Month, day).ToString("yyyy-MM-dd");
+				Date = new DateTime(now.AddDays(-1).Year, now.AddDays(-1).Month, now.AddDays(-1).Day).ToString("yyyy-MM-dd");
 			}
 			List<StockItem> Data = new List<StockItem>();
 			string[] inputfiles = DecompressDailyFiles(day,Date);
